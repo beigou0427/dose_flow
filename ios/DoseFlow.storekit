@@ -1,0 +1,124 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : ""
+      }
+    ]
+  },
+  "identifier" : "DF_STOREKIT_2026",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "79.99",
+      "familyShareable" : false,
+      "internalID" : "6478901234",
+      "localizations" : [
+        {
+          "description" : "Lifetime access to all GLP-1 pro tools",
+          "displayName" : "Lifetime Access",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "一次付費永久解鎖所有 GLP-1 專業工具",
+          "displayName" : "終身買斷方案",
+          "locale" : "zh_TW"
+        }
+      ],
+      "productID" : "com.doseflow.app.lifetime",
+      "referenceName" : "Lifetime Access",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21456789",
+      "localizations" : [
+
+      ],
+      "name" : "DoseFlow Pro Subscriptions",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "6.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6478901235",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Monthly auto-renewing access to all tools",
+              "displayName" : "Monthly Subscription",
+              "locale" : "en_US"
+            },
+            {
+              "description" : "每月自動續約解鎖全功能，彈性無綁約",
+              "displayName" : "月度訂閱",
+              "locale" : "zh_TW"
+            }
+          ],
+          "productID" : "com.doseflow.app.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Monthly Pro",
+          "subscriptionGroupID" : "21456789",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "39.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6478901236",
+          "introductoryOffer" : {
+            "internalID" : "INT-ANNUAL-3D",
+            "paymentMode" : "freeTrial",
+            "subscriptionPeriod" : "P3D"
+          },
+          "localizations" : [
+            {
+              "description" : "Annual access with 3-day free trial",
+              "displayName" : "Annual Subscription",
+              "locale" : "en_US"
+            },
+            {
+              "description" : "年訂閱含3天免費試用，省下45%",
+              "displayName" : "年度訂閱 (主推推薦)",
+              "locale" : "zh_TW"
+            }
+          ],
+          "productID" : "com.doseflow.app.annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Annual Pro with 3-Day Trial",
+          "subscriptionGroupID" : "21456789",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

@@ -1,0 +1,20 @@
+name: dose_flow
+description: "DoseFlow / 瘦瘦針紀錄 Pro - GLP-1 Pharmacokinetics, Peptide Syringe Calculator & Micro-Habits Tracker (100% Local-First)."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

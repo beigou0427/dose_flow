@@ -1,0 +1,13 @@
+*.class
+*.log
+.DS_Store
+.idea/
+.vscode/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+symbols/
