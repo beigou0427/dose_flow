@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/app_localization.dart';
@@ -9,6 +10,7 @@ import 'core/app_persistence.dart';
 import 'core/clinical_export_service.dart';
 import 'core/food_noise_engine.dart';
 import 'core/behavioral_economics_engine.dart';
+import 'core/legal_compliance_hub.dart';
 import 'features/calculator/syringe_calculator_view.dart';
 import 'features/onboarding/onboarding_view.dart';
 import 'features/duo/duo_layout_adapter.dart';
@@ -137,6 +139,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
   void initState() {
     super.initState();
     PurchaseService.instance.addListener(_onPurchaseStateChanged);
+    PurchaseService.instance.refreshLocalizedPrices();
     final AppStorageSnapshot snapshot = AppPersistence.instance.current;
     _logs = List<InjectionRecord>.from(snapshot.logs);
     _dailyProteinGrams = snapshot.dailyProteinGrams;
@@ -359,8 +362,8 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
         DuoOuterQuickActionCard(
           recommendedSite: nextSite,
           targetDoseMg: activeDose,
-          calculatedUnits: 50.0,
-          calculatedVolumeMl: 0.50,
+          calculatedUnits: ((activeDose / 5.0) * 100.0).clamp(5.0, 100.0),
+          calculatedVolumeMl: (((activeDose / 5.0) * 100.0).clamp(5.0, 100.0)) / 100.0,
           onConfirmInjection: () {
             onQuickLogShot(
               InjectionRecord(
@@ -380,7 +383,9 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
           now: now,
           isProUnlocked: isProUnlocked,
           onToggleProPreview: onToggleProPreview,
-          onOpenSwiftCodeDialog: () => SwiftReferenceExporter.showSwiftCodeModal(context),
+          onOpenSwiftCodeDialog: kDebugMode
+              ? () => SwiftReferenceExporter.showSwiftCodeModal(context)
+              : null,
         ),
         const SizedBox(height: 14),
         Card(
@@ -964,18 +969,43 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                   color: isProUnlocked ? const Color(0xFF10B981) : const Color(0xFF0EA5E9),
                 ),
                 const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      HapticFeedbackService.lightImpact();
-                      onTogglePro();
-                    },
-                    child: Text(
-                      isProUnlocked ? (isZh ? '返回免費限制版' : 'Switch to Free (Sandbox)') : (isZh ? '點擊一鍵快速測試升級' : 'Sandbox Sim Purchase'),
-                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    TextButton.icon(
+                      onPressed: () async {
+                        HapticFeedbackService.lightImpact();
+                        final bool restored = await PurchaseService.instance.restorePurchases();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                restored
+                                    ? (isZh ? '✅ 已成功恢復您的 Pro 授權！' : '✅ Pro access restored!')
+                                    : (isZh ? '未找到有效歷史購買紀錄。' : 'No active purchases found.'),
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.restore_rounded, size: 15),
+                      label: Text(
+                        isZh ? '恢復購買' : 'Restore Purchases',
+                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF0EA5E9), fontWeight: FontWeight.w700),
+                      ),
                     ),
-                  ),
+                    if (kDebugMode)
+                      TextButton(
+                        onPressed: () {
+                          HapticFeedbackService.lightImpact();
+                          onTogglePro();
+                        },
+                        child: Text(
+                          isProUnlocked ? (isZh ? '返回免費版' : 'Debug Free') : (isZh ? 'Debug 測試解鎖' : 'Debug Pro'),
+                          style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -1097,18 +1127,60 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
     final String backupBase64 = AppPersistence.instance.exportBackupString();
     final bool isZh = context.locale.isZh;
     showDialog<void>(context: context, builder: (ctx) => AlertDialog(
-      title: Text(isZh ? '匯出絕對隱私編碼 (Zero Cloud)' : 'Backup Encryption'),
-      content: SelectableText(backupBase64, maxLines: 4, style: const TextStyle(fontSize: 10, fontFamily: 'Consolas')),
-      actions: <Widget>[TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))]
+      title: Text(isZh ? '匯出本機加密備份 (Zero Cloud)' : 'Export Local Backup'),
+      content: SelectableText(backupBase64, maxLines: 5, style: const TextStyle(fontSize: 10.5, fontFamily: 'Consolas')),
+      actions: <Widget>[
+        TextButton.icon(
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: backupBase64));
+            Navigator.pop(ctx);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(isZh ? '✅ 已複製本機備份編碼至剪貼簿！' : '✅ Backup code copied!')),
+            );
+          },
+          icon: const Icon(Icons.copy_rounded, size: 16),
+          label: Text(isZh ? '複製編碼' : 'Copy'),
+        ),
+        TextButton(onPressed: () => Navigator.pop(ctx), child: Text(isZh ? '關閉' : 'Close')),
+      ],
     ));
   }
 
   void _showRestoreDialog(BuildContext context) {
     final bool isZh = context.locale.isZh;
+    final TextEditingController controller = TextEditingController();
     showDialog<void>(context: context, builder: (ctx) => AlertDialog(
-      title: Text(isZh ? '匯入與解譯恢復' : 'Offline Restore'),
-      content: Text(isZh ? '本地數據操作 (由外部載入功能在此調用實作。)' : 'Insert Hash stream mechanism triggered.'),
-      actions: <Widget>[TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))]
+      title: Text(isZh ? '貼上 Base64 備份還原' : 'Restore from Base64 Backup'),
+      content: TextField(
+        controller: controller,
+        maxLines: 4,
+        decoration: InputDecoration(
+          hintText: isZh ? '在此貼上先前匯出的 Base64 備份字串...' : 'Paste your exported Base64 backup string...',
+          border: const OutlineInputBorder(),
+        ),
+        style: const TextStyle(fontSize: 11, fontFamily: 'Consolas'),
+      ),
+      actions: <Widget>[
+        TextButton(onPressed: () => Navigator.pop(ctx), child: Text(isZh ? '取消' : 'Cancel')),
+        FilledButton(
+          onPressed: () async {
+            final bool ok = await AppPersistence.instance.importBackupString(controller.text);
+            if (ctx.mounted) Navigator.pop(ctx);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    ok
+                        ? (isZh ? '✅ 備份還原成功！重開 App 即完整載入紀錄。' : '✅ Backup restored successfully!')
+                        : (isZh ? '⚠️ 備份編碼格式無效，未更動現有資料。' : '⚠️ Invalid backup code format.'),
+                  ),
+                ),
+              );
+            }
+          },
+          child: Text(isZh ? '驗證並還原' : 'Restore'),
+        ),
+      ],
     ));
   }
 
@@ -1117,117 +1189,338 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
   // 混合 【康納曼 / 米爾格羅姆誘餌 / 塞勒 / 謝林】 極致絞肉機
   // ==========================================
   void _showPaywallModal(BuildContext context) {
+    PurchaseService.instance.refreshLocalizedPrices();
     final AppStrings s = context.strings;
     final AppLanguage lang = context.locale.language;
     final bool isZh = lang.isZh;
+
+    Future<void> triggerPurchase(
+      BuildContext sheetCtx,
+      SubscriptionTier tier,
+    ) async {
+      HapticFeedbackService.mediumImpact();
+      Navigator.pop(sheetCtx);
+      final bool ok = await PurchaseService.instance.purchase(tier);
+      if (ok) {
+        HapticFeedbackService.successPattern();
+      } else if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              PurchaseService.instance.lastErrorMessage ??
+                  (isZh ? '購買未完成或已取消' : 'Purchase cancelled'),
+            ),
+          ),
+        );
+      }
+    }
 
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       builder: (BuildContext sheetContext) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 36),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Center(child: Container(width: 42, height: 4, decoration: const BoxDecoration(color: Color(0xFFCBD5E1), borderRadius: BorderRadius.all(Radius.circular(999))))),
-              const SizedBox(height: 18),
-              
-              Text(
-                s.paywallHeadline, // 動態解鎖您的人生最後一瘦
-                style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w900, height: 1.25),
-              ),
-              const SizedBox(height: 8),
+        return ListenableBuilder(
+          listenable: PurchaseService.instance,
+          builder: (BuildContext ctx, _) {
+            final String annualPrice =
+                PurchaseService.instance.displayPriceFor(SubscriptionTier.annual);
+            final String monthlyPrice =
+                PurchaseService.instance.displayPriceFor(SubscriptionTier.monthly);
+            final String lifetimePrice =
+                PurchaseService.instance.displayPriceFor(SubscriptionTier.lifetime);
 
-              // 【工單 1】康納曼效益清單 / 【工單 2】塞勒從眾預設徽章
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: const BoxDecoration(color: Color(0xFFFEE2E2), borderRadius: BorderRadius.all(Radius.circular(6))),
-                child: Text(BehavioralEconomicsEngine.getKahnemanLossFramedHeadline(lang), style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 11.5, fontWeight: FontWeight.w800)),
-              ),
-              const SizedBox(height: 10),
-
-              // 年繳首推 (主力印鈔與鎖血)
-              InkWell(
-                borderRadius: const BorderRadius.all(Radius.circular(16)),
-                onTap: () async { HapticFeedbackService.mediumImpact(); Navigator.pop(sheetContext); await PurchaseService.instance.purchase(SubscriptionTier.annual); HapticFeedbackService.successPattern(); },
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: const Color(0xFF0EA5E9).withValues(alpha: 0.06), borderRadius: const BorderRadius.all(Radius.circular(16)), border: Border.all(color: const Color(0xFF0EA5E9), width: 1.8)),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const Padding(padding: EdgeInsets.only(top: 4.0), child: Icon(Icons.local_fire_department_rounded, color: Color(0xFF0EA5E9), size: 24)),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+            return SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Center(
+                      child: Container(
+                        width: 42,
+                        height: 4,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFCBD5E1),
+                          borderRadius: BorderRadius.all(Radius.circular(999)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      s.paywallHeadline,
+                      style: const TextStyle(
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.w900,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFEE2E2),
+                        borderRadius: BorderRadius.all(Radius.circular(6)),
+                      ),
+                      child: Text(
+                        BehavioralEconomicsEngine.getKahnemanLossFramedHeadline(lang),
+                        style: const TextStyle(
+                          color: Color(0xFFB91C1C),
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    InkWell(
+                      borderRadius: const BorderRadius.all(Radius.circular(16)),
+                      onTap: () => triggerPurchase(
+                        sheetContext,
+                        SubscriptionTier.annual,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0EA5E9).withValues(alpha: 0.06),
+                          borderRadius: const BorderRadius.all(Radius.circular(16)),
+                          border: Border.all(
+                            color: const Color(0xFF0EA5E9),
+                            width: 1.8,
+                          ),
+                        ),
+                        child: Row(
                           children: <Widget>[
-                            Text(BehavioralEconomicsEngine.getThalerDefaultNudgeBadge(lang), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF0284C7))),
-                            const SizedBox(height: 4),
-                            Text(
-                              isZh ? r'臨床計畫：NT$ 990 / 年 (提供 3 日免費全域保護試用)' : r'Annual Medical Track: $39.99/yr (3-Day Free Trial)',
-                              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                            const Icon(
+                              Icons.local_fire_department_rounded,
+                              color: Color(0xFF0EA5E9),
+                              size: 24,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text(
+                                    BehavioralEconomicsEngine.getThalerDefaultNudgeBadge(lang),
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF0284C7),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    isZh
+                                        ? '年繳 Pro 方案（含 3 天免費試用）'
+                                        : 'Annual Pro (3-Day Free Trial)',
+                                    style: const TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                             Text(
-                              BehavioralEconomicsEngine.getThalerMentalAccountAnchor(lang),
-                              style: const TextStyle(fontSize: 11.0, color: Color(0xFF0284C7), height: 1.4),
+                              '$annualPrice / ${isZh ? "年" : "yr"}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 14,
+                                color: Color(0xFF0284C7),
+                              ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // 【工單 6】米爾格羅姆終身 VIP $119.99 不對稱高昂誘導
-              InkWell(
-                borderRadius: const BorderRadius.all(Radius.circular(14)),
-                onTap: () async { HapticFeedbackService.heavyImpact(); Navigator.pop(sheetContext); await PurchaseService.instance.purchase(SubscriptionTier.lifetime); HapticFeedbackService.successPattern(); },
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(borderRadius: const BorderRadius.all(Radius.circular(14)), border: Border.all(color: const Color(0xFFD946EF), width: 1.2)),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.diamond_rounded, size: 20, color: Color(0xFFD946EF)),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(BehavioralEconomicsEngine.getMilgromDecoyLifetimeLabel(lang), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFFC026D3))),
-                            Text(BehavioralEconomicsEngine.getMilgromPeptideDiscriminationPitch(lang), style: const TextStyle(fontSize: 10, color: Color(0xFF86198F), height: 1.25)),
+                    ),
+                    const SizedBox(height: 10),
+                    InkWell(
+                      borderRadius: const BorderRadius.all(Radius.circular(14)),
+                      onTap: () => triggerPurchase(
+                        sheetContext,
+                        SubscriptionTier.monthly,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          borderRadius: const BorderRadius.all(Radius.circular(14)),
+                          border: Border.all(color: const Color(0xFFCBD5E1)),
+                        ),
+                        child: Row(
+                          children: <Widget>[
+                            const Icon(
+                              Icons.calendar_month_rounded,
+                              size: 20,
+                              color: Color(0xFF475569),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                isZh ? '月費方案（彈性無綁約）' : 'Monthly Pro (Flexible)',
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '$monthlyPrice / ${isZh ? "月" : "mo"}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      Text(BehavioralEconomicsEngine.getMilgromDecoyLifetimePrice(lang), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
-                    ]
-                  ),
+                    ),
+                    const SizedBox(height: 10),
+                    InkWell(
+                      borderRadius: const BorderRadius.all(Radius.circular(14)),
+                      onTap: () => triggerPurchase(
+                        sheetContext,
+                        SubscriptionTier.lifetime,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          borderRadius: const BorderRadius.all(Radius.circular(14)),
+                          border: Border.all(
+                            color: const Color(0xFFD946EF),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Row(
+                          children: <Widget>[
+                            const Icon(
+                              Icons.diamond_rounded,
+                              size: 20,
+                              color: Color(0xFFD946EF),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text(
+                                    BehavioralEconomicsEngine.getMilgromDecoyLifetimeLabel(lang),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFFC026D3),
+                                    ),
+                                  ),
+                                  Text(
+                                    isZh
+                                        ? '一次買斷，永久解鎖全部進階功能'
+                                        : 'One-time purchase, lifetime access',
+                                    style: const TextStyle(
+                                      fontSize: 10.5,
+                                      color: Color(0xFF86198F),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              lifetimePrice,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    PulsingCtaButton(
+                      onPressed: () => triggerPurchase(
+                        sheetContext,
+                        SubscriptionTier.annual,
+                      ),
+                      icon: Icons.assignment_turned_in_rounded,
+                      label: BehavioralEconomicsEngine.getSchellingUlyssesContractPledge(lang),
+                      color: const Color(0xFF0F172A),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        TextButton(
+                          onPressed: () async {
+                            final bool ok =
+                                await PurchaseService.instance.restorePurchases();
+                            if (sheetContext.mounted) Navigator.pop(sheetContext);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    ok
+                                        ? (isZh ? '✅ 已恢復訂閱！' : '✅ Restored!')
+                                        : (isZh
+                                            ? '未偵測到有效訂閱'
+                                            : 'No purchases found'),
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                          child: Text(
+                            isZh ? '恢復購買' : 'Restore',
+                            style: const TextStyle(fontSize: 11.5),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => showDialog<void>(
+                            context: context,
+                            builder: (_) => const LegalComplianceViewerDialog(
+                              initialDocType: ComplianceDocType.privacyPolicy,
+                            ),
+                          ),
+                          child: Text(
+                            isZh ? '隱私權政策' : 'Privacy',
+                            style: const TextStyle(fontSize: 11.5),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => showDialog<void>(
+                            context: context,
+                            builder: (_) => const LegalComplianceViewerDialog(
+                              initialDocType: ComplianceDocType.termsOfService,
+                            ),
+                          ),
+                          child: Text(
+                            isZh ? '服務條款' : 'Terms (EULA)',
+                            style: const TextStyle(fontSize: 11.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      isZh
+                          ? '年繳/月繳訂閱將於試用或當期結束前 24 小時透過您的 Apple ID 自動續訂扣款，可隨時至 App Store 訂閱設定取消。'
+                          : 'Subscriptions auto-renew via Apple ID unless cancelled at least 24h before period ends.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 10.0,
+                        color: Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 18),
-
-              // 【工單 10】謝林尤利西斯合約！防禦一切滑掉走人與逃跑心理！
-              Text(
-                BehavioralEconomicsEngine.getSchellingSunkCostLockIn(lang),
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
-              ),
-              const SizedBox(height: 8),
-              
-              PulsingCtaButton(
-                onPressed: () async { HapticFeedbackService.mediumImpact(); Navigator.pop(sheetContext); await PurchaseService.instance.purchase(SubscriptionTier.annual); HapticFeedbackService.successPattern(); },
-                icon: Icons.assignment_turned_in_rounded,
-                label: BehavioralEconomicsEngine.getSchellingUlyssesContractPledge(lang),
-                color: const Color(0xFF0F172A),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );

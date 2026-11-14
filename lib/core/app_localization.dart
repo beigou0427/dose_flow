@@ -140,8 +140,8 @@ class AppStrings {
       : 'Past 14d Accumulation + Next 7d Half-Life Forecast';
 
   String formatCurrentConcentration(double mg) => _zh
-      ? '目前預估體內殘留：${mg.toStringAsFixed(2)} mg — 處於食慾穩定抑制區間'
-      : 'Estimated Active Level: ${mg.toStringAsFixed(2)} mg — Optimal Suppression Zone';
+      ? '目前預估體內殘留：${mg.toStringAsFixed(2)} mg — 理論數學模型僅供個人紀錄參考'
+      : 'Estimated Active Level: ${mg.toStringAsFixed(2)} mg — Math model log reference only';
 
   String get nowMarkerLabel => _zh ? '現在 (Now)' : 'NOW';
   String get pastSolidLegend => _zh ? '歷史累積濃度' : 'Active History';

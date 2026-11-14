@@ -1012,8 +1012,8 @@ class _OnboardingViewState extends State<OnboardingView> {
                     children: <Widget>[
                       Text(
                         isZh
-                            ? r'年繳方案（首選推薦）：NT$ 990 / 年 (含 3 天免費試用)'
-                            : r'Annual: $39.99 / yr (3-Day Free Trial)',
+                            ? 'Pro 完整追蹤方案（提供年繳 3 天免費試用選項）'
+                            : 'Pro Plans Available (3-Day Free Trial on Annual)',
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
@@ -1040,8 +1040,8 @@ class _OnboardingViewState extends State<OnboardingView> {
             onPressed: _nextStep,
             icon: Icons.bolt_rounded,
             label: isZh
-                ? '開啟 3 天免費試用並進入方案'
-                : 'Start 3-Day Free Trial & View Plan',
+                ? '完成設定，查看我的專屬曲線'
+                : 'Complete Setup & View My Plan',
             color: const Color(0xFF0EA5E9),
           ),
           const SizedBox(height: 6),

@@ -27,7 +27,7 @@ class DuoDeviceDetector {
     final Orientation orientation = MediaQuery.of(context).orientation;
 
     // 寬度大於閾值視為展開 7.6 吋大螢幕
-    if (size.width >= unfoldedWidthThreshold && (orientation == Orientation.portrait || orientation == Orientation.landscape)) {
+    if (size.shortestSide >= 580.0 && size.width >= unfoldedWidthThreshold && (orientation == Orientation.portrait || orientation == Orientation.landscape)) {
       // 若高度與寬度接近且處於橫向/半折狀態，可適配為雙欄
       return DuoDisplayPosture.unfoldedDualPane;
     }

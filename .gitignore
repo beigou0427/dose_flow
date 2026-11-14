@@ -11,3 +11,16 @@
 .pub/
 /build/
 symbols/
+# Security & Build Artifacts
+*.p8
+AuthKey_*.p8
+tool/screenshots/
+screenshots/
+build/
+ios/ExportOptions.plist
+NEXT_CHAT_PROMPT.txt
+deploy_all_cli.sh
+deploy_master.sh
+final_verify_and_submit.sh
+gen.swift
+fastlane/
