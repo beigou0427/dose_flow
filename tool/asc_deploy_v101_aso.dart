@@ -58,20 +58,24 @@ class AscV101AsoEngine {
       'keywords':
           '瘦瘦筆,減肥,打針,針筒,刻度,半衰期,劑量,提醒,日曆,蛋白質,喝水,便秘,反胃,隱私,離線,計算,自費,瘦身,減脂,代謝,排程,食慾,噁心,掉肌,肌肉,回診,PDF,換算,混水,胜肽,體脂,BMI',
       'promotionalText':
-          'FDA 仿單雙指數藥動學模型：10 秒記錄體內殘留濃度與 U-100 針筒格數。100% 本地離線不連網、支援 Face ID 隱私鎖與回診 PDF 報表，立即享 3 天免費試用。',
+          '每週打針總忘記上次打哪一邊？10 秒視覺化輪替部位、即時推估體內藥效曲線與 U-100 針筒刻度。本機優先隱私＋Face ID 鎖與回診 PDF，立即享 3 天免費試用。',
       'whatsNew':
           '全新 1.1 深色醫療科技介面升級：新增視覺化人體部位輪替地圖、即時藥效濃度百分比儀表、智慧週期打卡日曆與推播提醒，以及 Face ID 隱私鎖與個人 iCloud 備份。',
-      'description': '''正在進行每週 GLP-1 或胜肽體重管理療程嗎？
-「瘦瘦針紀錄 Pro」是專為 GLP-1 療程打造的 100% 離線隱私助手。
-實時推估吸收高峰 (Tmax) 與半衰期波谷，U-100 針筒一秒精算防呆！
+      'description': '''每週打針總忘記上次打哪一邊、或搞不清楚體內藥效還剩多少嗎？
+「瘦瘦針紀錄 Pro」是專為 GLP-1 體重管理療程打造的本機優先隱私助手。
+依據美國 FDA 官方仿單參數，即時視覺化吸收高峰 (Tmax) 與半衰期趨勢，U-100 針筒刻度一秒輔助換算！
 
 【核心特色】
-1. 視覺化部位輪替地圖：自動避開肚臍 5 公分，提示下一次建議部位，預防皮下硬塊與瘀青。
-2. 實時藥動學曲線與濃度儀表：採用美國 FDA 仿單標準 Bateman 雙指數模型，視覺化 7 天半衰期衰退。
-3. U-100 針筒換算器：乾粉胜肽混水一秒計算抽針刻度，徹底杜絕過量風險。
+1. 視覺化部位輪替地圖：自動標示避開肚臍 5 公分區域並提示下次建議位置，協助輪替部位、降低重複施打造成的不適。
+2. 即時藥動學曲線與濃度儀表：採用美國 FDA 仿單 Bateman 雙指數模型，視覺化 7 天半衰期變化與估計濃度比例。
+3. U-100 針筒輔助換算器：支援現成藥液與乾粉混水雙模式，協助核對抽針刻度，減少手動換算失誤。
 4. 智慧週期打卡日曆與提醒：自訂每週施打日與換針消毒提醒，不錯過每次排程。
-5. 劑量與體重趨勢追蹤：對照每次調劑里程碑與防掉肌蛋白質／補水習慣環。
-6. 100% 在地隱私保護：支援 Face ID 鎖、個人 iCloud 加密備份與一鍵匯出回診 PDF 報告，免註冊、無外部伺服器。
+5. 劑量與體重趨勢追蹤：對照每次調劑階段變化，搭配蛋白質與補水目標環，維持日常健康習慣。
+6. 本機優先隱私保護：免註冊、無第三方伺服器，資料僅存於您的裝置與可選個人加密 iCloud 備份；支援 Face ID 密碼鎖與一鍵匯出回診 PDF 報告。
+
+【訂閱與自動續訂說明】
+• 提供年繳（含 3 天免費試用）、月繳與終身買斷方案；確認購買時將由您的 Apple ID 扣款。
+• 訂閱將於試用期或當期結束前 24 小時自動續訂，您可隨時於 iPhone「設定」> Apple ID >「訂閱項目」取消。
 
 【醫療免責聲明與 FDA 仿單依據】
 本 App 僅供個人健康記錄與教育參考，所有代謝濃度曲線均為數學推估 (Bateman Function)，源自美國 FDA 官方仿單 (Section 12.3 Pharmacokinetics) 半衰期與 Tmax 參數，不代表實際血液測量值，亦不提供醫療診斷或劑量調整指導。調整用藥前請務必諮詢您的處方主治醫師。
@@ -85,23 +89,27 @@ class AscV101AsoEngine {
       'keywords':
           'tirzepatide,semaglutide,syringe,compound,vial,bac,rotation,log,dosage,site,schedule,reminder,diary',
       'promotionalText':
-          'Track live GLP-1 half-life levels & U-100 syringe units in 10 seconds. 100% local privacy with Face ID lock, reminder calendar & 1-tap Doctor PDF. Try 3 days free.',
+          'Never guess where to inject next. Track site rotation, GLP-1 half-life curves & U-100 units in 10s. Local-first privacy, Face ID lock & Doctor PDF. Try 3 days free.',
       'whatsNew':
           'v1.1 Deep Medical Dark UI upgrade: Visual body injection site rotation map, live concentration gauge, smart weekly reminder calendar, Face ID privacy lock, and private iCloud backup.',
-      'description': '''Tracking your weekly Tirzepatide, Semaglutide, or Compounded Peptide routine?
-DoseFlow is a dedicated privacy-first companion built on clinical pharmacokinetics.
-Forecast 7-day half-life decay, absorption peaks & U-100 syringe units instantly.
+      'description': '''Ever forget which side you injected last week—or wonder where you are in your 7-day cycle?
+DoseFlow is a dedicated local-first privacy companion for weekly Tirzepatide, Semaglutide, and Peptide routines.
+Visualize estimated half-life curves, absorption peaks, and U-100 syringe units in seconds.
 
-KEY CLINICAL FEATURES:
-- Visual Site Rotation Map: Rotate injection sites away from the navel to help prevent bruising and lipohypertrophy.
-- Live Bateman PK Curve & Gauge: Forecast your 7-day half-life decay and absorption peaks calibrated strictly against published FDA Prescribing Information.
-- U-100 Syringe Calculator: Convert reconstituted peptide vials into exact insulin syringe units instantly.
-- Smart Weekly Reminder Calendar: Schedule weekly shot-day and fresh needle prep reminders so you never miss a dose.
-- Anti-Muscle Loss Habits: Hit daily protein and hydration rings to preserve vital skeletal muscle.
-- 100% Local-First Privacy: Face ID / passcode lock, optional private iCloud backup, 1-tap Doctor PDF export, and zero external servers.
+KEY FEATURES:
+- Visual Site Rotation Map: Guided rotation away from the navel to help minimize repeated-site discomfort.
+- Live Bateman PK Curve & Gauge: Visualize estimated 7-day half-life decay and absorption peaks based on published FDA Prescribing Information.
+- U-100 Syringe Unit Helper: Quickly calculate syringe units for premixed or reconstituted vials to help reduce manual math errors.
+- Smart Weekly Reminder Calendar: Schedule weekly shot-day and fresh needle prep alerts so you stay right on track.
+- Daily Protein & Hydration Rings: Track weight milestones alongside daily protein and water goals to support healthy lean habits.
+- Local-First Privacy: No account required and zero external servers—data stays on your iPhone with optional private iCloud backup, Face ID lock, and 1-tap Doctor PDF export.
+
+SUBSCRIPTION & AUTO-RENEWAL INFO:
+- Annual (with 3-day free trial), Monthly, and Lifetime options available. Payment is charged to your Apple ID at confirmation.
+- Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period in iOS Settings > Apple ID > Subscriptions.
 
 REGULATORY DISCLAIMER & FDA CITATIONS:
-DoseFlow is intended solely for personal health logging. All concentration curves are theoretical mathematical estimates (Bateman Function) derived from published FDA Prescribing Information (Section 12.3) and do not represent actual blood laboratory measurements. Always consult your prescribing physician before adjusting doses.
+DoseFlow is intended solely for personal health logging and educational reference. All concentration curves are theoretical mathematical estimates (Bateman Function) derived from published FDA Prescribing Information (Section 12.3) and do not represent actual blood laboratory measurements. Always consult your prescribing physician before adjusting doses.
 
 TERMS OF USE & PRIVACY:
 - Terms of Use (Standard Apple EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
@@ -112,23 +120,27 @@ TERMS OF USE & PRIVACY:
       'keywords':
           'insulin,subcutaneous,fat,loss,weight,muscle,protein,rebound,tmax,injection,scale,bmi,gut,water,med',
       'promotionalText':
-          'Track live GLP-1 half-life & U-100 syringe units in 10s. 100% local privacy, Face ID lock & 1-tap Doctor PDF. Try 3 days free.',
+          'Never guess where to inject next. Track site rotation, GLP-1 half-life & U-100 units in 10s. Local-first privacy, Face ID lock & Doctor PDF. Try 3 days free.',
       'whatsNew':
           'v1.1 Deep Medical Dark UI upgrade: Visual body injection site rotation map, live concentration gauge, smart weekly reminder calendar, Face ID privacy lock, and private iCloud backup.',
-      'description': '''Tracking your weekly Tirzepatide, Semaglutide, or Compounded Peptide routine?
-DoseFlow is a dedicated privacy-first companion built on clinical pharmacokinetics.
-Forecast 7-day half-life decay, absorption peaks & U-100 syringe units instantly.
+      'description': '''Ever forget which side you injected last week—or wonder where you are in your 7-day cycle?
+DoseFlow is a dedicated local-first privacy companion for weekly Tirzepatide, Semaglutide, and Peptide routines.
+Visualize estimated half-life curves, absorption peaks, and U-100 syringe units in seconds.
 
-KEY CLINICAL FEATURES:
-- Visual Site Rotation Map: Rotate injection sites away from the navel to help prevent bruising and lipohypertrophy.
-- Live Bateman PK Curve & Gauge: Forecast your 7-day half-life decay and absorption peaks calibrated strictly against published FDA Prescribing Information.
-- U-100 Syringe Calculator: Convert reconstituted peptide vials into exact insulin syringe units instantly.
-- Smart Weekly Reminder Calendar: Schedule weekly shot-day and fresh needle prep reminders so you never miss a dose.
-- Anti-Muscle Loss Habits: Hit daily protein and hydration rings to preserve vital skeletal muscle.
-- 100% Local-First Privacy: Face ID / passcode lock, optional private iCloud backup, 1-tap Doctor PDF export, and zero external servers.
+KEY FEATURES:
+- Visual Site Rotation Map: Guided rotation away from the navel to help minimize repeated-site discomfort.
+- Live Bateman PK Curve & Gauge: Visualize estimated 7-day half-life decay and absorption peaks based on published FDA Prescribing Information.
+- U-100 Syringe Unit Helper: Quickly calculate syringe units for premixed or reconstituted vials to help reduce manual math errors.
+- Smart Weekly Reminder Calendar: Schedule weekly shot-day and fresh needle prep alerts so you stay right on track.
+- Daily Protein & Hydration Rings: Track weight milestones alongside daily protein and water goals to support healthy lean habits.
+- Local-First Privacy: No account required and zero external servers—data stays on your iPhone with optional private iCloud backup, Face ID lock, and 1-tap Doctor PDF export.
+
+SUBSCRIPTION & AUTO-RENEWAL INFO:
+- Annual (with 3-day free trial), Monthly, and Lifetime options available. Payment is charged to your Apple ID at confirmation.
+- Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period in iOS Settings > Apple ID > Subscriptions.
 
 REGULATORY DISCLAIMER & FDA CITATIONS:
-DoseFlow is intended solely for personal health logging. All concentration curves are theoretical mathematical estimates (Bateman Function) derived from published FDA Prescribing Information (Section 12.3) and do not represent actual blood laboratory measurements. Always consult your prescribing physician before adjusting doses.
+DoseFlow is intended solely for personal health logging and educational reference. All concentration curves are theoretical mathematical estimates (Bateman Function) derived from published FDA Prescribing Information (Section 12.3) and do not represent actual blood laboratory measurements. Always consult your prescribing physician before adjusting doses.
 
 TERMS OF USE & PRIVACY:
 - Terms of Use (Standard Apple EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
@@ -150,14 +162,22 @@ TERMS OF USE & PRIVACY:
     for (final Map<String, String> cfg in versionLocConfigs) {
       final String locale = cfg['locale']!;
       final String keywords = cfg['keywords']!;
+      final String promo = cfg['promotionalText']!;
       final String desc = cfg['description']!;
       if (keywords.contains(' ') || keywords.length > 100) {
         throw StateError(
           'ASO 關鍵字違反限制 (${keywords.length} chars / 包含空格) [$locale]',
         );
       }
-      if (keywords.toLowerCase().contains('shotsy') || desc.contains('#1')) {
-        throw StateError('ASO 合規檢查失敗：包含競品字或未佐證排名宣稱 [$locale]');
+      if (promo.length > 170) {
+        throw StateError(
+          'ASO 行銷文字超過 170 字元 (${promo.length} chars) [$locale]',
+        );
+      }
+      if (keywords.toLowerCase().contains('shotsy') ||
+          desc.contains('#1') ||
+          desc.contains('徹底杜絕')) {
+        throw StateError('ASO 合規檢查失敗：包含競品字、#1 宣稱或絕對化醫療詞 [$locale]');
       }
       // Verify zero duplicate terms inside keywords itself
       final List<String> terms =
