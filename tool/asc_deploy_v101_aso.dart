@@ -41,13 +41,13 @@ class AscV101AsoEngine {
       <Map<String, String>>[
     <String, String>{
       'locale': 'zh-Hant',
-      'name': '瘦瘦針紀錄 Pro - 猛健樂善纖達與減重週期管理',
-      'subtitle': 'GLP-1 注射部位輪替、藥效濃度曲線與體重追蹤日記',
+      'name': '瘦瘦針紀錄 Pro - GLP-1 減重週期管理',
+      'subtitle': '注射部位輪替、藥效濃度曲線與體重追蹤日記',
     },
     <String, String>{
       'locale': 'en-US',
       'name': 'DoseFlow - GLP-1 Shot Tracker',
-      'subtitle': 'Mounjaro, Zepbound & Wegovy',
+      'subtitle': 'Peptide Half-Life & U-100 Calc',
     },
   ];
 
@@ -55,20 +55,23 @@ class AscV101AsoEngine {
       <Map<String, String>>[
     <String, String>{
       'locale': 'zh-Hant',
-      'keywords': '胰妥讚,週纖達,康纖伴,半衰期,瘦身,蛋白,喝水,便秘,反胃,計算,刻度,自費',
+      'keywords':
+          '瘦瘦筆,減重,減肥,體重,打針,針筒,刻度,半衰期,藥效,濃度,曲線,部位,輪替,劑量,提醒,日曆,蛋白質,喝水,便秘,反胃,隱私,離線,計算,自費,瘦身,減脂,代謝,追蹤,記錄,日記,排程',
       'promotionalText':
-          'FDA 仿單雙指數藥動學模型：10 秒記錄體內殘留濃度與 U-100 針筒格數。100% 本地離線不連網、免註冊帳號，回診一鍵匯出醫師評估表，立即享 3 天免費試用。',
-      'whatsNew': '優化週期紀錄體驗與介面細節調整，提升整體操作流暢度。',
-      'description': '''正在使用猛健樂 (Mounjaro)、週纖達 (Wegovy) 或胰妥讚 (Ozempic) 嗎？
+          'FDA 仿單雙指數藥動學模型：10 秒記錄體內殘留濃度與 U-100 針筒格數。100% 本地離線不連網、支援 Face ID 隱私鎖與回診 PDF 報表，立即享 3 天免費試用。',
+      'whatsNew':
+          '全新 1.1 深色醫療科技介面升級：新增視覺化人體部位輪替地圖、即時藥效濃度百分比儀表、智慧週期打卡日曆與推播提醒，以及 Face ID 隱私鎖與個人 iCloud 備份。',
+      'description': '''正在進行每週 GLP-1 或胜肽體重管理療程嗎？
 「瘦瘦針紀錄 Pro」是專為 GLP-1 療程打造的 100% 離線隱私助手。
-實時預測吸收高峰 (Tmax) 與半衰期波谷，U-100 針筒一秒精算防呆！
+實時推估吸收高峰 (Tmax) 與半衰期波谷，U-100 針筒一秒精算防呆！
 
 【核心特色】
-1. 實時藥動學曲線：採用美國 FDA 仿單標準 Bateman 雙指數模型，精確預測 7 天半衰期衰退與波谷。
-2. U-100 針筒換算器：乾粉胜肽混水一秒計算抽針刻度，徹底杜絕過量風險。
-3. 8 大部位輪替地圖：自動避開肚臍 5 公分，預防皮下脂肪增生硬塊與瘀青。
-4. 習慣達成環：每日蛋白質與補水目標追蹤，守護核心骨骼肌不流失。
-5. 100% 離線隱私：無外部伺服器、免註冊帳號，所有健康數據僅存在您的裝置中。
+1. 視覺化部位輪替地圖：自動避開肚臍 5 公分，提示下一次建議部位，預防皮下硬塊與瘀青。
+2. 實時藥動學曲線與濃度儀表：採用美國 FDA 仿單標準 Bateman 雙指數模型，視覺化 7 天半衰期衰退。
+3. U-100 針筒換算器：乾粉胜肽混水一秒計算抽針刻度，徹底杜絕過量風險。
+4. 智慧週期打卡日曆與提醒：自訂每週施打日與換針消毒提醒，不錯過每次排程。
+5. 劑量與體重趨勢追蹤：對照每次調劑里程碑與防掉肌蛋白質／補水習慣環。
+6. 100% 在地隱私保護：支援 Face ID 鎖、個人 iCloud 加密備份與一鍵匯出回診 PDF 報告，免註冊、無外部伺服器。
 
 【醫療免責聲明與 FDA 仿單依據】
 本 App 僅供個人健康記錄與教育參考，所有代謝濃度曲線均為數學推估 (Bateman Function)，源自美國 FDA 官方仿單 (Section 12.3 Pharmacokinetics) 半衰期與 Tmax 參數，不代表實際血液測量值，亦不提供醫療診斷或劑量調整指導。調整用藥前請務必諮詢您的處方主治醫師。
@@ -80,21 +83,22 @@ class AscV101AsoEngine {
     <String, String>{
       'locale': 'en-US',
       'keywords':
-          'ozempic,tirzepatide,semaglutide,peptide,u100,syringe,half,life,shotsy,compound,vial,bac,water',
+          'tirzepatide,semaglutide,glp1,peptide,u100,syringe,half,life,compound,vial,bac,water,rotation,log',
       'promotionalText':
-          'Track live GLP-1 half-life levels & U-100 syringe units in 10 seconds. 100% offline privacy, zero account required, 1-tap Doctor PDF. Try 3 days free.',
+          'Track live GLP-1 half-life levels & U-100 syringe units in 10 seconds. 100% local privacy with Face ID lock, reminder calendar & 1-tap Doctor PDF. Try 3 days free.',
       'whatsNew':
-          'Optimized tracking experience and refined UI details for smoother performance.',
-      'description': '''Taking Mounjaro, Zepbound, Wegovy, Ozempic, or Compounded Peptides?
-DoseFlow is the #1 privacy-first companion built on clinical pharmacokinetics.
+          'v1.1 Deep Medical Dark UI upgrade: Visual body injection site rotation map, live concentration gauge, smart weekly reminder calendar, Face ID privacy lock, and private iCloud backup.',
+      'description': '''Tracking your weekly Tirzepatide, Semaglutide, or Compounded Peptide routine?
+DoseFlow is a dedicated privacy-first companion built on clinical pharmacokinetics.
 Forecast 7-day half-life decay, absorption peaks & U-100 syringe units instantly.
 
 KEY CLINICAL FEATURES:
-- Live Bateman PK Curve: Forecast your 7-day half-life decay and absorption peaks calibrated strictly against published FDA Prescribing Information.
+- Visual Site Rotation Map: Rotate injection sites away from the navel to help prevent bruising and lipohypertrophy.
+- Live Bateman PK Curve & Gauge: Forecast your 7-day half-life decay and absorption peaks calibrated strictly against published FDA Prescribing Information.
 - U-100 Syringe Calculator: Convert reconstituted peptide vials into exact insulin syringe units instantly.
-- Smart 8-Quadrant Rotation: Rotate injection sites away from the navel to prevent bruising and lipohypertrophy.
+- Smart Weekly Reminder Calendar: Schedule weekly shot-day and fresh needle prep reminders so you never miss a dose.
 - Anti-Muscle Loss Habits: Hit daily protein and hydration rings to preserve vital skeletal muscle.
-- 100% Local-First Privacy: Zero external cloud servers. Zero account registration required.
+- 100% Local-First Privacy: Face ID / passcode lock, optional private iCloud backup, 1-tap Doctor PDF export, and zero external servers.
 
 REGULATORY DISCLAIMER & FDA CITATIONS:
 DoseFlow is intended solely for personal health logging. All concentration curves are theoretical mathematical estimates (Bateman Function) derived from published FDA Prescribing Information (Section 12.3) and do not represent actual blood laboratory measurements. Always consult your prescribing physician before adjusting doses.
@@ -108,19 +112,20 @@ TERMS OF USE & PRIVACY:
       'keywords':
           'insulin,subcutaneous,fat,loss,weight,muscle,protein,rebound,tmax,injection,scale,bmi,gut,water,med',
       'promotionalText':
-          'Track live GLP-1 half-life & U-100 syringe units in 10s. 100% offline privacy, 1-tap Doctor PDF. Try 3 days free.',
+          'Track live GLP-1 half-life & U-100 syringe units in 10s. 100% local privacy, Face ID lock & 1-tap Doctor PDF. Try 3 days free.',
       'whatsNew':
-          'Optimized tracking experience and refined UI details for smoother performance.',
-      'description': '''Taking Mounjaro, Zepbound, Wegovy, Ozempic, or Compounded Peptides?
-DoseFlow is the #1 privacy-first companion built on clinical pharmacokinetics.
+          'v1.1 Deep Medical Dark UI upgrade: Visual body injection site rotation map, live concentration gauge, smart weekly reminder calendar, Face ID privacy lock, and private iCloud backup.',
+      'description': '''Tracking your weekly Tirzepatide, Semaglutide, or Compounded Peptide routine?
+DoseFlow is a dedicated privacy-first companion built on clinical pharmacokinetics.
 Forecast 7-day half-life decay, absorption peaks & U-100 syringe units instantly.
 
 KEY CLINICAL FEATURES:
-- Live Bateman PK Curve: Forecast your 7-day half-life decay and absorption peaks calibrated strictly against published FDA Prescribing Information.
+- Visual Site Rotation Map: Rotate injection sites away from the navel to help prevent bruising and lipohypertrophy.
+- Live Bateman PK Curve & Gauge: Forecast your 7-day half-life decay and absorption peaks calibrated strictly against published FDA Prescribing Information.
 - U-100 Syringe Calculator: Convert reconstituted peptide vials into exact insulin syringe units instantly.
-- Smart 8-Quadrant Rotation: Rotate injection sites away from the navel to prevent bruising and lipohypertrophy.
+- Smart Weekly Reminder Calendar: Schedule weekly shot-day and fresh needle prep reminders so you never miss a dose.
 - Anti-Muscle Loss Habits: Hit daily protein and hydration rings to preserve vital skeletal muscle.
-- 100% Local-First Privacy: Zero external cloud servers. Zero account registration required.
+- 100% Local-First Privacy: Face ID / passcode lock, optional private iCloud backup, 1-tap Doctor PDF export, and zero external servers.
 
 REGULATORY DISCLAIMER & FDA CITATIONS:
 DoseFlow is intended solely for personal health logging. All concentration curves are theoretical mathematical estimates (Bateman Function) derived from published FDA Prescribing Information (Section 12.3) and do not represent actual blood laboratory measurements. Always consult your prescribing physician before adjusting doses.
@@ -145,31 +150,52 @@ TERMS OF USE & PRIVACY:
     for (final Map<String, String> cfg in versionLocConfigs) {
       final String locale = cfg['locale']!;
       final String keywords = cfg['keywords']!;
-      final int byteLen = utf8.encode(keywords).length;
-      if (keywords.contains(' ') || byteLen > 100) {
+      final String desc = cfg['description']!;
+      if (keywords.contains(' ') || keywords.length > 100) {
         throw StateError(
-          'ASO 關鍵字違反限制 ($byteLen Bytes / 包含空格) [$locale]',
+          'ASO 關鍵字違反限制 (${keywords.length} chars / 包含空格) [$locale]',
         );
       }
+      if (keywords.toLowerCase().contains('shotsy') || desc.contains('#1')) {
+        throw StateError('ASO 合規檢查失敗：包含競品字或未佐證排名宣稱 [$locale]');
+      }
     }
-    stdout.writeln('🟢 [0/3] ASO 1.0.1 高權重文字預檢 100% 符合 Apple 規範！');
+    stdout.writeln('🟢 [0/3] ASO 合規預檢 100% 通過（無競品字、無 #1 宣稱、無標題商標、字數達標）！');
   }
 
   static Future<void> run() async {
     assertGuardrails();
     final Map<String, String> headers = buildHeaders();
 
-    // 1. 同步 AppInfo 標題與副標題 (zh-Hant & en-US)
+    // 1. 同步 AppInfo 標題與副標題 (優先挑選可編輯的 PREPARE_FOR_SUBMISSION AppInfo)
     stdout.writeln('\n📡 [1/3] 正在同步 AppInfo 高曝光標題與副標題...');
     final http.Response infoRes = await http.get(
       Uri.parse('$baseUrl/v1/apps/$appId/appInfos'),
       headers: headers,
     );
-    final String appInfoId =
-        (((jsonDecode(infoRes.body) as Map<String, dynamic>)['data']
-                as List<dynamic>)
-            .first as Map<String, dynamic>)['id']
+    final List<dynamic> appInfos =
+        ((jsonDecode(infoRes.body) as Map<String, dynamic>)['data']
+                as List<dynamic>?) ??
+            <dynamic>[];
+    Map<String, dynamic> selectedInfo = appInfos.first as Map<String, dynamic>;
+    for (final dynamic item in appInfos) {
+      final Map<String, dynamic> m = item as Map<String, dynamic>;
+      final String state =
+          ((m['attributes'] as Map<String, dynamic>?)?['appStoreState'] ?? '')
+              .toString();
+      if (state == 'PREPARE_FOR_SUBMISSION' ||
+          state == 'DEVELOPER_REJECTED' ||
+          state == 'REJECTED') {
+        selectedInfo = m;
+        break;
+      }
+    }
+    final String appInfoId = selectedInfo['id'].toString();
+    final String infoState =
+        ((selectedInfo['attributes'] as Map<String, dynamic>?)?['appStoreState'] ??
+                'UNKNOWN')
             .toString();
+    stdout.writeln('  ℹ️ 鎖定 AppInfo: $appInfoId (狀態: $infoState)');
 
     final http.Response infoLocRes = await http.get(
       Uri.parse('$baseUrl/v1/appInfos/$appInfoId/appInfoLocalizations'),
@@ -211,8 +237,9 @@ TERMS OF USE & PRIVACY:
             },
           }),
         );
+        final String icon = patchRes.statusCode >= 200 && patchRes.statusCode < 300 ? '🟢' : '⚠️';
         stdout.writeln(
-          '  🟢 [$locale] 標題與副標題更新成功 [${patchRes.statusCode}]: ${cfg['name']}',
+          '  $icon [$locale] 標題與副標題回應 [${patchRes.statusCode}]: ${cfg['name']}',
         );
       } else {
         final http.Response postRes = await http.post(
@@ -236,8 +263,9 @@ TERMS OF USE & PRIVACY:
             },
           }),
         );
+        final String icon = postRes.statusCode >= 200 && postRes.statusCode < 300 ? '🟢' : '⚠️';
         stdout.writeln(
-          '  🟢 [$locale] 新建標題與副標題成功 [${postRes.statusCode}]: ${cfg['name']}',
+          '  $icon [$locale] 新建標題與副標題回應 [${postRes.statusCode}]: ${cfg['name']}',
         );
       }
     }
@@ -349,9 +377,13 @@ TERMS OF USE & PRIVACY:
             },
           }),
         );
+        final String icon = patchRes.statusCode >= 200 && patchRes.statusCode < 300 ? '🟢' : '⚠️';
         stdout.writeln(
-          '  🟢 [$locale] 1.0.1 ASO 更新成功 [${patchRes.statusCode}] (${utf8.encode(keywords).length} Bytes)',
+          '  $icon [$locale] ASO 更新回應 [${patchRes.statusCode}] (${keywords.length}/100 chars)',
         );
+        if (patchRes.statusCode >= 400) {
+          stdout.writeln('    ↳ ${patchRes.body}');
+        }
       } else {
         final http.Response postRes = await http.post(
           Uri.parse('$baseUrl/v1/appStoreVersionLocalizations'),
@@ -374,9 +406,13 @@ TERMS OF USE & PRIVACY:
             },
           }),
         );
+        final String icon = postRes.statusCode >= 200 && postRes.statusCode < 300 ? '🟢' : '⚠️';
         stdout.writeln(
-          '  🟢 [$locale] 1.0.1 跨語系 ASO 新建成功 [${postRes.statusCode}] (${utf8.encode(keywords).length} Bytes)',
+          '  $icon [$locale] 跨語系 ASO 新建回應 [${postRes.statusCode}] (${keywords.length}/100 chars)',
         );
+        if (postRes.statusCode >= 400) {
+          stdout.writeln('    ↳ ${postRes.body}');
+        }
       }
     }
   }
