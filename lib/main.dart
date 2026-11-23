@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/app_localization.dart';
+import 'core/app_theme.dart';
 import 'core/pharmacokinetics_engine.dart';
 import 'core/haptic_feedback_service.dart';
 import 'core/purchase_service.dart';
@@ -11,9 +12,13 @@ import 'core/clinical_export_service.dart';
 import 'core/food_noise_engine.dart';
 import 'core/behavioral_economics_engine.dart';
 import 'core/legal_compliance_hub.dart';
+import 'core/reminder_service.dart';
+import 'core/privacy_security_service.dart';
 import 'features/calculator/syringe_calculator_view.dart';
 import 'features/onboarding/onboarding_view.dart';
 import 'features/duo/duo_layout_adapter.dart';
+import 'features/rotation/body_rotation_map.dart';
+import 'features/schedule/reminder_calendar_card.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -90,24 +95,7 @@ class _DoseFlowAppState extends State<DoseFlowApp> {
       child: MaterialApp(
         title: 'DoseFlow',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0EA5E9)),
-          scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.transparent,
-            elevation: 0,
-            scrolledUnderElevation: 1.0,
-          ),
-          cardTheme: const CardThemeData(
-            color: Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(18)),
-            ),
-          ),
-        ),
+        theme: DoseFlowTheme.darkTheme,
         home: _hasCompletedOnboarding
             ? MainShellScreen(initialProfile: _initialProfile)
             : OnboardingView(onComplete: _handleOnboardingComplete, onSkip: _handleSkipOnboarding),
@@ -134,6 +122,15 @@ class _MainShellScreenState extends State<MainShellScreen> {
   late bool _bowelCompletedToday;
   late double _startWeightKg;
   late double _targetWeightKg;
+  late bool _shotReminderEnabled;
+  late int _shotReminderWeekday;
+  late int _shotReminderHour;
+  late int _shotReminderMinute;
+  late bool _needlePrepReminderEnabled;
+  late bool _biometricLockEnabled;
+  late bool _iCloudBackupEnabled;
+  DateTime? _lastICloudSyncAt;
+  bool _isPrivacyLocked = false;
 
   @override
   void initState() {
@@ -149,7 +146,16 @@ class _MainShellScreenState extends State<MainShellScreen> {
     _bowelCompletedToday = snapshot.bowelCompletedToday;
     _startWeightKg = snapshot.startWeightKg;
     _targetWeightKg = snapshot.targetWeightKg;
-    
+    _shotReminderEnabled = snapshot.shotReminderEnabled;
+    _shotReminderWeekday = snapshot.shotReminderWeekday;
+    _shotReminderHour = snapshot.shotReminderHour;
+    _shotReminderMinute = snapshot.shotReminderMinute;
+    _needlePrepReminderEnabled = snapshot.needlePrepReminderEnabled;
+    _biometricLockEnabled = snapshot.biometricLockEnabled;
+    _iCloudBackupEnabled = snapshot.iCloudBackupEnabled;
+    _lastICloudSyncAt = snapshot.lastICloudSyncAt;
+    _isPrivacyLocked = snapshot.biometricLockEnabled;
+
     // Seed test logs
     _sideEffectLogs = <DailySideEffectLog>[
       DailySideEffectLog(id: 'se_s1', date: DateTime.now().subtract(const Duration(days: 1)), foodNoiseSuppression: 5, fatigueLevel: 2),
@@ -167,26 +173,144 @@ class _MainShellScreenState extends State<MainShellScreen> {
 
   void _persistCurrentState() {
     AppPersistence.instance.saveSnapshot(AppStorageSnapshot(
-      logs: _logs, dailyProteinGrams: _dailyProteinGrams, targetProteinGrams: _targetProteinGrams,
-      dailyWaterMl: _dailyWaterMl, targetWaterMl: _targetWaterMl, bowelCompletedToday: _bowelCompletedToday,
-      startWeightKg: _startWeightKg, targetWeightKg: _targetWeightKg, lastSavedTimestamp: DateTime.now(),
+      logs: _logs,
+      dailyProteinGrams: _dailyProteinGrams,
+      targetProteinGrams: _targetProteinGrams,
+      dailyWaterMl: _dailyWaterMl,
+      targetWaterMl: _targetWaterMl,
+      bowelCompletedToday: _bowelCompletedToday,
+      startWeightKg: _startWeightKg,
+      targetWeightKg: _targetWeightKg,
+      lastSavedTimestamp: DateTime.now(),
+      shotReminderEnabled: _shotReminderEnabled,
+      shotReminderWeekday: _shotReminderWeekday,
+      shotReminderHour: _shotReminderHour,
+      shotReminderMinute: _shotReminderMinute,
+      needlePrepReminderEnabled: _needlePrepReminderEnabled,
+      biometricLockEnabled: _biometricLockEnabled,
+      iCloudBackupEnabled: _iCloudBackupEnabled,
+      lastICloudSyncAt: _lastICloudSyncAt,
     ));
+    if (_iCloudBackupEnabled) {
+      PrivacySecurityService.instance.syncBackupToICloud();
+    }
+  }
+
+  void _syncRemindersForCurrentLocale(AppLanguage lang) {
+    final Glp1Medication activeMed =
+        _logs.isNotEmpty ? _logs.first.medication : Glp1Medication.tirzepatide;
+    final InjectionSite? lastSite = _logs.isNotEmpty ? _logs.first.site : null;
+    final InjectionSite nextSite =
+        PharmacokineticsEngine.recommendNextSite(_logs);
+    ReminderService.instance.syncReminders(
+      shotReminderEnabled: _shotReminderEnabled,
+      needlePrepReminderEnabled: _needlePrepReminderEnabled,
+      weekday: _shotReminderWeekday,
+      hour: _shotReminderHour,
+      minute: _shotReminderMinute,
+      lang: lang,
+      medication: activeMed,
+      lastSite: lastSite,
+      nextSite: nextSite,
+    );
   }
 
   void _handleAddLog(InjectionRecord record) {
     HapticFeedbackService.heavyImpact();
     setState(() => _logs.insert(0, record));
     _persistCurrentState();
+    _syncRemindersForCurrentLocale(context.locale.language);
+  }
+
+  Future<void> _unlockPrivacyGate() async {
+    final bool isZh = context.locale.isZh;
+    final bool ok = await PrivacySecurityService.instance.authenticate(
+      reason: isZh
+          ? '請驗證 Face ID 或裝置密碼以檢視您的健康紀錄'
+          : 'Authenticate with Face ID or passcode to view your health logs',
+    );
+    if (ok && mounted) {
+      HapticFeedbackService.successPattern();
+      setState(() => _isPrivacyLocked = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final AppStrings s = context.strings;
+    final AppLanguage lang = context.locale.language;
+    final bool isZh = lang.isZh;
     final DateTime now = DateTime.now();
     final bool isPro = PurchaseService.instance.isProUnlocked;
     final double estimatedCurrentWeight = _logs.isNotEmpty
         ? (_startWeightKg - (_logs.length * 0.45)).clamp(_targetWeightKg, _startWeightKg)
         : _startWeightKg;
+
+    if (_isPrivacyLocked) {
+      return Scaffold(
+        backgroundColor: DoseFlowColors.bgDeep,
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(28.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Container(
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      color: DoseFlowColors.mint.withValues(alpha: 0.14),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: DoseFlowColors.mint.withValues(alpha: 0.5),
+                        width: 2,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.shield_rounded,
+                      size: 54,
+                      color: DoseFlowColors.mint,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    isZh ? 'DoseFlow 隱私保護已鎖定' : 'DoseFlow Privacy Lock Active',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: DoseFlowColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    isZh
+                        ? '所有健康與注射數據 100% 僅存於本機與個人 iCloud'
+                        : 'All health records stay 100% local on your device & private iCloud',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: DoseFlowColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: _unlockPrivacyGate,
+                    icon: const Icon(Icons.face_rounded),
+                    label: Text(isZh ? '使用 Face ID / 密碼解鎖' : 'Unlock with Face ID'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     final Widget dashboardPage = HomeDashboardView(
       logs: _logs,
@@ -225,15 +349,88 @@ class _MainShellScreenState extends State<MainShellScreen> {
       dashboardPage,
       ShotLogAndCalculatorView(logs: _logs, isProUnlocked: isPro, onAddLog: _handleAddLog, onRequestUnlockPro: PurchaseService.instance.toggleProForTesting),
       analyticsPage,
-      SettingsAndPaywallView(isProUnlocked: isPro, onTogglePro: PurchaseService.instance.toggleProForTesting),
+      SettingsAndPaywallView(
+        isProUnlocked: isPro,
+        onTogglePro: PurchaseService.instance.toggleProForTesting,
+        logs: _logs,
+        startWeightKg: _startWeightKg,
+        currentWeightKg: estimatedCurrentWeight,
+        shotReminderEnabled: _shotReminderEnabled,
+        shotReminderWeekday: _shotReminderWeekday,
+        shotReminderHour: _shotReminderHour,
+        shotReminderMinute: _shotReminderMinute,
+        needlePrepReminderEnabled: _needlePrepReminderEnabled,
+        biometricLockEnabled: _biometricLockEnabled,
+        iCloudBackupEnabled: _iCloudBackupEnabled,
+        lastICloudSyncAt: _lastICloudSyncAt,
+        onReminderChanged: ({
+          bool? shotReminderEnabled,
+          int? shotReminderWeekday,
+          int? shotReminderHour,
+          int? shotReminderMinute,
+          bool? needlePrepReminderEnabled,
+        }) {
+          setState(() {
+            if (shotReminderEnabled != null) _shotReminderEnabled = shotReminderEnabled;
+            if (shotReminderWeekday != null) _shotReminderWeekday = shotReminderWeekday;
+            if (shotReminderHour != null) _shotReminderHour = shotReminderHour;
+            if (shotReminderMinute != null) _shotReminderMinute = shotReminderMinute;
+            if (needlePrepReminderEnabled != null) _needlePrepReminderEnabled = needlePrepReminderEnabled;
+          });
+          _persistCurrentState();
+          _syncRemindersForCurrentLocale(lang);
+        },
+        onToggleBiometricLock: (bool enable) async {
+          if (enable) {
+            final bool ok = await PrivacySecurityService.instance.authenticate(
+              reason: isZh
+                  ? '啟用 Face ID 保護您的 DoseFlow 健康紀錄'
+                  : 'Enable Face ID to protect your DoseFlow logs',
+            );
+            if (!ok) return;
+          }
+          if (!mounted) return;
+          setState(() => _biometricLockEnabled = enable);
+          _persistCurrentState();
+        },
+        onToggleICloudBackup: (bool enable) async {
+          if (enable) {
+            await PrivacySecurityService.instance.syncBackupToICloud();
+          }
+          if (!mounted) return;
+          setState(() {
+            _iCloudBackupEnabled = enable;
+            if (enable) _lastICloudSyncAt = DateTime.now();
+          });
+          _persistCurrentState();
+        },
+        onManualICloudSync: () async {
+          final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+          final bool ok = await PrivacySecurityService.instance.syncBackupToICloud();
+          if (!mounted) return;
+          if (ok) {
+            setState(() => _lastICloudSyncAt = DateTime.now());
+            _persistCurrentState();
+          }
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                ok
+                    ? (isZh ? '☁️ 已加密同步至您的個人 iCloud 空間！' : '☁️ Synced privately to your iCloud!')
+                    : (isZh ? '⚠️ 無法連線 iCloud，請確認裝置已登入 Apple ID。' : '⚠️ Unable to reach iCloud.'),
+              ),
+            ),
+          );
+        },
+      ),
     ];
 
     final PreferredSizeWidget topAppBar = AppBar(
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(s.appTitle, style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
-          Text(s.appSubtitle, style: const TextStyle(fontSize: 11.0, color: Color(0xFF64748B))),
+          Text(s.appTitle, style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800, color: DoseFlowColors.textPrimary)),
+          Text(s.appSubtitle, style: const TextStyle(fontSize: 11.0, color: DoseFlowColors.textSecondary)),
         ],
       ),
       actions: const [Padding(padding: EdgeInsets.only(right: 12.0), child: LanguageTogglePill())],
@@ -316,10 +513,10 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
       children: <Widget>[
         Card(
           elevation: 0,
-          color: const Color(0xFF0EA5E9).withValues(alpha: 0.08),
+          color: DoseFlowColors.cardSurface,
           shape: RoundedRectangleBorder(
-            borderRadius: const BorderRadius.all(Radius.circular(18)),
-            side: BorderSide(color: const Color(0xFF0EA5E9).withValues(alpha: 0.28)),
+            borderRadius: const BorderRadius.all(Radius.circular(20)),
+            side: BorderSide(color: DoseFlowColors.mint.withValues(alpha: 0.35)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -327,11 +524,14 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
               children: <Widget>[
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF0EA5E9),
-                    borderRadius: BorderRadius.all(Radius.circular(14)),
+                  decoration: BoxDecoration(
+                    color: DoseFlowColors.mint.withValues(alpha: 0.16),
+                    borderRadius: const BorderRadius.all(Radius.circular(14)),
+                    border: Border.all(
+                      color: DoseFlowColors.mint.withValues(alpha: 0.4),
+                    ),
                   ),
-                  child: const Icon(Icons.alarm_on_rounded, color: Colors.white, size: 24),
+                  child: const Icon(Icons.alarm_on_rounded, color: DoseFlowColors.mint, size: 24),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -340,16 +540,16 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
                     children: <Widget>[
                       Text(
                         s.nextShotCountdownTitle,
-                        style: const TextStyle(fontSize: 12.0, color: Color(0xFF475569), fontWeight: FontWeight.w600),
+                        style: const TextStyle(fontSize: 12.0, color: DoseFlowColors.textSecondary, fontWeight: FontWeight.w600),
                       ),
                       Text(
                         s.formatDaysHours(daysLeft, hoursLeft),
-                        style: const TextStyle(fontSize: 18.0, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                        style: const TextStyle(fontSize: 19.0, fontWeight: FontWeight.w900, color: DoseFlowColors.textPrimary),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '${s.recommendedNextSiteLabel}：${nextSite.label(lang)}',
-                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF0284C7), fontWeight: FontWeight.w700),
+                        style: const TextStyle(fontSize: 11.5, color: DoseFlowColors.mint, fontWeight: FontWeight.w700),
                       ),
                     ],
                   ),
@@ -357,25 +557,6 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        DuoOuterQuickActionCard(
-          recommendedSite: nextSite,
-          targetDoseMg: activeDose,
-          calculatedUnits: ((activeDose / 5.0) * 100.0).clamp(5.0, 100.0),
-          calculatedVolumeMl: (((activeDose / 5.0) * 100.0).clamp(5.0, 100.0)) / 100.0,
-          onConfirmInjection: () {
-            onQuickLogShot(
-              InjectionRecord(
-                id: 'duo_shot_${DateTime.now().millisecondsSinceEpoch}',
-                timestamp: DateTime.now(),
-                medication: activeMed,
-                doseMg: activeDose,
-                site: nextSite,
-                painLevel: 1,
-              ),
-            );
-          },
         ),
         const SizedBox(height: 14),
         DoseConcentrationCard(
@@ -388,12 +569,30 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
               : null,
         ),
         const SizedBox(height: 14),
+        BodyRotationMapCard(
+          logs: logs,
+          activeDoseMg: activeDose,
+          activeMedication: activeMed,
+          onConfirmInjection: (InjectionSite chosenSite) {
+            onQuickLogShot(
+              InjectionRecord(
+                id: 'map_shot_${DateTime.now().millisecondsSinceEpoch}',
+                timestamp: DateTime.now(),
+                medication: activeMed,
+                doseMg: activeDose,
+                site: chosenSite,
+                painLevel: 1,
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 14),
         Card(
           elevation: 0,
-          color: Colors.white,
+          color: DoseFlowColors.cardSurface,
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(20)),
-            side: BorderSide(color: Color(0xFFE2E8F0)),
+            side: BorderSide(color: DoseFlowColors.cardBorder),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -402,12 +601,12 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    const Icon(Icons.fitness_center_rounded, color: Color(0xFFF97316), size: 20),
+                    const Icon(Icons.fitness_center_rounded, color: DoseFlowColors.amber, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         s.microHabitsSectionTitle,
-                        style: const TextStyle(fontSize: 15.0, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                        style: const TextStyle(fontSize: 15.0, fontWeight: FontWeight.w800, color: DoseFlowColors.textPrimary),
                       ),
                     ),
                   ],
@@ -416,7 +615,7 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
                 _buildHabitRow(
                   title: '${s.proteinRingTitle} ($proteinGrams / ${targetProteinGrams}g)',
                   progress: (proteinGrams / targetProteinGrams).clamp(0.0, 1.0),
-                  color: const Color(0xFFF97316),
+                  color: DoseFlowColors.amber,
                   buttons: <Widget>[
                     OutlinedButton(onPressed: () => onAddProtein(20), child: Text(s.proteinQuickAdd20, style: const TextStyle(fontSize: 11.5))),
                     const SizedBox(width: 6),
@@ -427,7 +626,7 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
                 _buildHabitRow(
                   title: '${s.waterRingTitle} ($waterMl / ${targetWaterMl}ml)',
                   progress: (waterMl / targetWaterMl).clamp(0.0, 1.0),
-                  color: const Color(0xFF0EA5E9),
+                  color: DoseFlowColors.cyan,
                   buttons: <Widget>[
                     OutlinedButton(onPressed: () => onAddWater(250), child: Text(s.waterQuickAdd250, style: const TextStyle(fontSize: 11.5))),
                     const SizedBox(width: 6),
@@ -435,24 +634,24 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
                   ],
                 ),
                 const SizedBox(height: 16),
-                
+
                 // 【工單 9 - 貝克 (Becker) 健康資本微推力：不記錄則觸發損失感受】
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7),
+                    color: DoseFlowColors.amber.withValues(alpha: 0.12),
                     borderRadius: const BorderRadius.all(Radius.circular(12)),
-                    border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+                    border: Border.all(color: DoseFlowColors.amber.withValues(alpha: 0.35)),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      const Icon(Icons.timer_off_rounded, color: Color(0xFFD97706), size: 20),
+                      const Icon(Icons.timer_off_rounded, color: DoseFlowColors.amber, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           BehavioralEconomicsEngine.getBeckerHabitLoopNudge(lang),
-                          style: const TextStyle(fontSize: 11.5, color: Color(0xFF92400E), height: 1.45),
+                          style: const TextStyle(fontSize: 11.5, color: Color(0xFFFFE0A6), height: 1.45),
                         ),
                       ),
                     ],
@@ -467,18 +666,18 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
                       color: bowelCompleted
-                          ? const Color(0xFF10B981).withValues(alpha: 0.12)
-                          : const Color(0xFFF8FAFC),
+                          ? DoseFlowColors.mint.withValues(alpha: 0.15)
+                          : DoseFlowColors.cardElevated,
                       borderRadius: const BorderRadius.all(Radius.circular(12)),
                       border: Border.all(
-                        color: bowelCompleted ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
+                        color: bowelCompleted ? DoseFlowColors.mint : DoseFlowColors.cardBorder,
                       ),
                     ),
                     child: Row(
                       children: <Widget>[
                         Icon(
                           bowelCompleted ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                          color: bowelCompleted ? const Color(0xFF10B981) : const Color(0xFF64748B),
+                          color: bowelCompleted ? DoseFlowColors.mint : DoseFlowColors.textSecondary,
                           size: 22,
                         ),
                         const SizedBox(width: 10),
@@ -488,7 +687,7 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
                             style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: bowelCompleted ? FontWeight.w700 : FontWeight.w500,
-                              color: bowelCompleted ? const Color(0xFF065F46) : const Color(0xFF334155),
+                              color: bowelCompleted ? DoseFlowColors.mint : DoseFlowColors.textPrimary,
                             ),
                           ),
                         ),
@@ -503,13 +702,13 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0EA5E9).withValues(alpha: 0.08),
+                      color: DoseFlowColors.cyan.withValues(alpha: 0.12),
                       borderRadius: const BorderRadius.all(Radius.circular(12)),
-                      border: Border.all(color: const Color(0xFF0EA5E9).withValues(alpha: 0.3)),
+                      border: Border.all(color: DoseFlowColors.cyan.withValues(alpha: 0.35)),
                     ),
                     child: Row(
                       children: <Widget>[
-                        const Icon(Icons.psychology_rounded, color: Color(0xFF0EA5E9), size: 22),
+                        const Icon(Icons.psychology_rounded, color: DoseFlowColors.cyan, size: 22),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -520,10 +719,10 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
                                 : (isZh
                                     ? '點擊記錄今日大腦食慾噪音 (10秒快速評估)'
                                     : 'Tap to log today\'s Food Noise (10s check-in)'),
-                            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF0369A1)),
+                            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF7BE3FF)),
                           ),
                         ),
-                        const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF0EA5E9)),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: DoseFlowColors.cyan),
                       ],
                     ),
                   ),
@@ -540,7 +739,7 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(title, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF334155))),
+        Text(title, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: DoseFlowColors.textPrimary)),
         const SizedBox(height: 6),
         LinearProgressIndicator(
           value: progress,
@@ -587,13 +786,13 @@ class DoseColoredWeightChartPainter extends CustomPainter {
     final double maxVal = vals.reduce(math.max) + 1.5;
     final double valRange = math.max(1.0, maxVal - minVal);
 
-    final Paint gridPaint = Paint()..color = const Color(0xFFCBD5E1).withValues(alpha: 0.35)..strokeWidth = 1.0;
+    final Paint gridPaint = Paint()..color = DoseFlowColors.textMuted.withValues(alpha: 0.22)..strokeWidth = 1.0;
     for (int i = 0; i <= 3; i++) {
       final double y = topPad + plotHeight * (i / 3.0);
       final double tickVal = maxVal - (valRange * (i / 3.0));
       canvas.drawLine(Offset(leftPad, y), Offset(size.width - rightPad, y), gridPaint);
       final TextPainter tp = TextPainter(
-        text: TextSpan(text: tickVal.toStringAsFixed(0), style: const TextStyle(fontSize: 10.0, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+        text: TextSpan(text: tickVal.toStringAsFixed(0), style: const TextStyle(fontSize: 10.0, color: DoseFlowColors.textSecondary, fontWeight: FontWeight.w600)),
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, Offset(leftPad - tp.width - 6, y - tp.height / 2));
@@ -608,19 +807,32 @@ class DoseColoredWeightChartPainter extends CustomPainter {
     for (int i = 0; i < points.length - 1; i++) {
       final Offset p1 = getCoord(i);
       final Offset p2 = getCoord(i + 1);
-      final Color segmentColor = isProUnlocked ? PharmacokineticsEngine.colorForDose(points[i + 1].associatedDoseMg) : const Color(0xFF94A3B8);
+      final Color segmentColor = isProUnlocked ? PharmacokineticsEngine.colorForDose(points[i + 1].associatedDoseMg) : DoseFlowColors.mint;
+      canvas.drawLine(p1, p2, Paint()..color = segmentColor.withValues(alpha: 0.28)..strokeWidth = 7.0..strokeCap = StrokeCap.round);
       canvas.drawLine(p1, p2, Paint()..color = segmentColor..strokeWidth = 3.2..strokeCap = StrokeCap.round);
     }
     for (int i = 0; i < points.length; i++) {
       final Offset pt = getCoord(i);
-      final Color nodeColor = isProUnlocked ? PharmacokineticsEngine.colorForDose(points[i].associatedDoseMg) : const Color(0xFF64748B);
-      canvas.drawCircle(pt, 5.5, Paint()..color = Colors.white);
+      final Color nodeColor = isProUnlocked ? PharmacokineticsEngine.colorForDose(points[i].associatedDoseMg) : DoseFlowColors.mint;
+      final bool isDoseUpgrade = i == 0 || points[i].associatedDoseMg > points[i - 1].associatedDoseMg;
+      if (isDoseUpgrade) {
+        canvas.drawLine(
+          Offset(pt.dx, topPad),
+          Offset(pt.dx, topPad + plotHeight),
+          Paint()..color = nodeColor.withValues(alpha: 0.35)..strokeWidth = 1.2,
+        );
+      }
+      canvas.drawCircle(pt, 5.5, Paint()..color = DoseFlowColors.bgNavy);
       canvas.drawCircle(pt, 4.0, Paint()..color = nodeColor);
+      final String label = isDoseUpgrade
+          ? '${vals[i].toStringAsFixed(1)} (${points[i].associatedDoseMg.toStringAsFixed(1)}mg)'
+          : vals[i].toStringAsFixed(1);
       final TextPainter tp = TextPainter(
-        text: TextSpan(text: vals[i].toStringAsFixed(1), style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: nodeColor)),
+        text: TextSpan(text: label, style: TextStyle(fontSize: 9.0, fontWeight: FontWeight.w800, color: nodeColor)),
         textDirection: TextDirection.ltr,
       )..layout();
-      tp.paint(canvas, Offset(pt.dx - tp.width / 2, pt.dy - 16));
+      final double lx = (pt.dx - tp.width / 2).clamp(leftPad, size.width - tp.width - 4);
+      tp.paint(canvas, Offset(lx, pt.dy - 17));
     }
   }
   @override bool shouldRepaint(covariant DoseColoredWeightChartPainter old) => old.points != points || old.isProUnlocked != isProUnlocked || old.unit != unit;
@@ -658,21 +870,42 @@ class AnalyticsView extends StatelessWidget {
       children: <Widget>[
         Card(
           elevation: 0,
-          color: Colors.white,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(20)),
-            side: BorderSide(color: Color(0xFFE2E8F0)),
+          color: DoseFlowColors.cardSurface,
+          shape: RoundedRectangleBorder(
+            borderRadius: const BorderRadius.all(Radius.circular(20)),
+            side: BorderSide(color: DoseFlowColors.mint.withValues(alpha: 0.35)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            child: Column(
               children: <Widget>[
-                _buildStatColumn(label: isZh ? '起始體重' : 'Start', value: '${startWeightDisplay.toStringAsFixed(1)} ${unit.symbol}', color: const Color(0xFF475569)),
-                Container(width: 1, height: 38, color: const Color(0xFFE2E8F0)),
-                _buildStatColumn(label: isZh ? '當前體重' : 'Current', value: '${currentWeightDisplay.toStringAsFixed(1)} ${unit.symbol}', color: const Color(0xFF0EA5E9)),
-                Container(width: 1, height: 38, color: const Color(0xFFE2E8F0)),
-                _buildStatColumn(label: isZh ? '累積減重' : 'Lost', value: '-${totalLoss.toStringAsFixed(1)} ${unit.symbol}', color: const Color(0xFF10B981)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: <Widget>[
+                    _buildStatColumn(label: isZh ? '起始體重' : 'Start', value: '${startWeightDisplay.toStringAsFixed(1)} ${unit.symbol}', color: DoseFlowColors.textSecondary),
+                    Container(width: 1, height: 38, color: DoseFlowColors.cardBorder),
+                    _buildStatColumn(label: isZh ? '當前體重' : 'Current', value: '${currentWeightDisplay.toStringAsFixed(1)} ${unit.symbol}', color: DoseFlowColors.cyan),
+                    Container(width: 1, height: 38, color: DoseFlowColors.cardBorder),
+                    _buildStatColumn(label: isZh ? '累積減重' : 'Lost', value: '-${totalLoss.toStringAsFixed(1)} ${unit.symbol}', color: DoseFlowColors.mint),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: DoseFlowColors.mint.withValues(alpha: 0.12),
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    border: Border.all(color: DoseFlowColors.mint.withValues(alpha: 0.35)),
+                  ),
+                  child: Text(
+                    isZh
+                        ? '已記錄 ${math.max(1, logs.length)} 週 ｜ 體重累計減輕 -${totalLoss.toStringAsFixed(1)} ${unit.symbol}'
+                        : 'Tracked ${math.max(1, logs.length)} wks | Total Lost -${totalLoss.toStringAsFixed(1)} ${unit.symbol}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: DoseFlowColors.mint),
+                  ),
+                ),
               ],
             ),
           ),
@@ -680,8 +913,8 @@ class AnalyticsView extends StatelessWidget {
         const SizedBox(height: 16),
         Card(
           elevation: 0,
-          color: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: const BorderRadius.all(Radius.circular(20)), side: BorderSide(color: isProUnlocked ? const Color(0xFF0EA5E9).withValues(alpha: 0.35) : const Color(0xFFE2E8F0))),
+          color: DoseFlowColors.cardSurface,
+          shape: RoundedRectangleBorder(borderRadius: const BorderRadius.all(Radius.circular(20)), side: BorderSide(color: isProUnlocked ? DoseFlowColors.mint.withValues(alpha: 0.4) : DoseFlowColors.cardBorder)),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -694,9 +927,9 @@ class AnalyticsView extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text(s.analyticsChartTitle, style: const TextStyle(fontSize: 15.0, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+                          Text(s.analyticsChartTitle, style: const TextStyle(fontSize: 15.0, fontWeight: FontWeight.w800, color: DoseFlowColors.textPrimary)),
                           const SizedBox(height: 2),
-                          Text(isZh ? '每段折線依當期劑量著色 (紫色: 2.5mg, 藍色: 5.0mg)' : 'Segments colored by dose (Purple: 2.5mg, Blue: 5.0mg)', style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+                          Text(isZh ? '每段折線依調劑里程碑著色 (2.5mg 🟢 → 5.0mg 🔺升級)' : 'Segments & pins colored by dose titration (2.5mg → 5.0mg)', style: const TextStyle(fontSize: 11.5, color: DoseFlowColors.textSecondary)),
                         ],
                       ),
                     ),
@@ -704,12 +937,12 @@ class AnalyticsView extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 14),
-                SizedBox(height: 190, width: double.infinity, child: CustomPaint(painter: DoseColoredWeightChartPainter(points: mockWeightHistory, isProUnlocked: isProUnlocked, unit: unit))),
+                SizedBox(height: 195, width: double.infinity, child: CustomPaint(painter: DoseColoredWeightChartPainter(points: mockWeightHistory, isProUnlocked: isProUnlocked, unit: unit))),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: const BoxDecoration(color: Color(0xFFF8FAFC), borderRadius: BorderRadius.all(Radius.circular(10))),
-                  child: Text(isZh ? '💡 臨床趨勢：升級 5.0mg 後每週減重提升至 1.5 ${unit.symbol}，有效克服平臺期。' : '💡 Titrating to 5.0mg accelerated weight loss to 1.5 ${unit.symbol}/week.', style: const TextStyle(fontSize: 11.5, color: Color(0xFF334155))),
+                  decoration: const BoxDecoration(color: DoseFlowColors.cardElevated, borderRadius: BorderRadius.all(Radius.circular(10))),
+                  child: Text(isZh ? '💡 臨床趨勢：升級 5.0mg 後每週減重提升至 1.5 ${unit.symbol}，有效克服平臺期。' : '💡 Titrating to 5.0mg accelerated weight loss to 1.5 ${unit.symbol}/week.', style: const TextStyle(fontSize: 11.5, color: DoseFlowColors.textSecondary)),
                 ),
               ],
             ),
@@ -718,8 +951,8 @@ class AnalyticsView extends StatelessWidget {
         const SizedBox(height: 16),
         Card(
           elevation: 0,
-          color: Colors.white,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20)), side: BorderSide(color: Color(0xFFE2E8F0))),
+          color: DoseFlowColors.cardSurface,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20)), side: BorderSide(color: DoseFlowColors.cardBorder)),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -727,9 +960,9 @@ class AnalyticsView extends StatelessWidget {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    const Icon(Icons.psychology_rounded, color: Color(0xFF8B5CF6), size: 22),
+                    const Icon(Icons.psychology_rounded, color: DoseFlowColors.purple, size: 22),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(isZh ? '打針後第 1～7 天大腦食慾壓制動態' : 'Day 1～7 Food Noise Dynamics', style: const TextStyle(fontSize: 15.0, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)))),
+                    Expanded(child: Text(isZh ? '打針後第 1～7 天大腦食慾壓制動態' : 'Day 1～7 Food Noise Dynamics', style: const TextStyle(fontSize: 15.0, fontWeight: FontWeight.w800, color: DoseFlowColors.textPrimary))),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -741,18 +974,18 @@ class AnalyticsView extends StatelessWidget {
                 const SizedBox(height: 14),
                 Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: const Color(0xFF8B5CF6).withValues(alpha: 0.08), borderRadius: const BorderRadius.all(Radius.circular(12)), border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.3))),
+                  decoration: BoxDecoration(color: DoseFlowColors.purple.withValues(alpha: 0.14), borderRadius: const BorderRadius.all(Radius.circular(12)), border: Border.all(color: DoseFlowColors.purple.withValues(alpha: 0.35))),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      const Icon(Icons.event_available_rounded, color: Color(0xFF8B5CF6), size: 18),
+                      const Icon(Icons.event_available_rounded, color: DoseFlowColors.purple, size: 18),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           isZh
                             ? 'AI 建議打針時機：${recommendation.recommendedTimeLabel}\n${recommendation.rationale(lang)}'
                             : 'AI Timing: ${recommendation.recommendedTimeLabel}\n${recommendation.rationale(lang)}',
-                          style: const TextStyle(fontSize: 12.0, fontWeight: FontWeight.w700, color: Color(0xFF6D28D9), height: 1.45),
+                          style: const TextStyle(fontSize: 12.0, fontWeight: FontWeight.w700, color: Color(0xFFD6CCFF), height: 1.45),
                         ),
                       ),
                     ],
@@ -763,12 +996,12 @@ class AnalyticsView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // 【工單 4 - 箭 (Arrow) & 工單 7 梯若爾 (Tirole) : 看診溝通底氣 ✕ 醫師查核表單匯出樞紐】
         Card(
           elevation: 0,
-          color: Colors.white,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20)), side: BorderSide(color: Color(0xFFE2E8F0))),
+          color: DoseFlowColors.cardSurface,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20)), side: BorderSide(color: DoseFlowColors.cardBorder)),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -777,12 +1010,12 @@ class AnalyticsView extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.health_and_safety_rounded, color: Color(0xFF0F172A), size: 24),
+                    const Icon(Icons.health_and_safety_rounded, color: DoseFlowColors.mint, size: 24),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         BehavioralEconomicsEngine.getArrowPhysicianEmpowermentPitch(lang),
-                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), height: 1.3),
+                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: DoseFlowColors.textPrimary, height: 1.3),
                       ),
                     ),
                   ],
@@ -792,20 +1025,20 @@ class AnalyticsView extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 8.0),
                   child: Row(
                     children: [
-                      const Icon(Icons.task_alt_rounded, size: 16, color: Color(0xFF0EA5E9)),
+                      const Icon(Icons.task_alt_rounded, size: 16, color: DoseFlowColors.cyan),
                       const SizedBox(width: 8),
-                      Expanded(child: Text(txt, style: const TextStyle(fontSize: 12.0, color: Color(0xFF475569)))),
+                      Expanded(child: Text(txt, style: const TextStyle(fontSize: 12.0, color: DoseFlowColors.textSecondary))),
                     ]
                   ),
                 )),
                 const Divider(height: 24),
                 Text(
                   BehavioralEconomicsEngine.getArrowFdaCertaintyAnchor(lang),
-                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8)),
+                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: DoseFlowColors.textMuted),
                 ),
                 Text(
                   BehavioralEconomicsEngine.getTiroleClinicReferralWatermark(lang),
-                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF10B981)),
+                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: DoseFlowColors.mint),
                 ),
                 const SizedBox(height: 14),
                 SizedBox(
@@ -814,7 +1047,7 @@ class AnalyticsView extends StatelessWidget {
                     onPressed: () => _showDoctorExportDialog(context),
                     icon: const Icon(Icons.picture_as_pdf_rounded),
                     label: Text(s.exportDoctorPdfButton),
-                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0F172A), padding: const EdgeInsets.symmetric(vertical: 14)),
+                    style: FilledButton.styleFrom(backgroundColor: DoseFlowColors.mint, foregroundColor: const Color(0xFF041A18), padding: const EdgeInsets.symmetric(vertical: 14)),
                   ),
                 ),
               ],
@@ -887,14 +1120,51 @@ class AnalyticsView extends StatelessWidget {
   }
 }
 
-class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywallView({
+class SettingsAndPaywallView extends StatelessWidget {
+  const SettingsAndPaywallView({
     super.key,
     required this.isProUnlocked,
     required this.onTogglePro,
+    required this.logs,
+    required this.startWeightKg,
+    required this.currentWeightKg,
+    required this.shotReminderEnabled,
+    required this.shotReminderWeekday,
+    required this.shotReminderHour,
+    required this.shotReminderMinute,
+    required this.needlePrepReminderEnabled,
+    required this.biometricLockEnabled,
+    required this.iCloudBackupEnabled,
+    required this.lastICloudSyncAt,
+    required this.onReminderChanged,
+    required this.onToggleBiometricLock,
+    required this.onToggleICloudBackup,
+    required this.onManualICloudSync,
   });
 
   final bool isProUnlocked;
   final VoidCallback onTogglePro;
+  final List<InjectionRecord> logs;
+  final double startWeightKg;
+  final double currentWeightKg;
+  final bool shotReminderEnabled;
+  final int shotReminderWeekday;
+  final int shotReminderHour;
+  final int shotReminderMinute;
+  final bool needlePrepReminderEnabled;
+  final bool biometricLockEnabled;
+  final bool iCloudBackupEnabled;
+  final DateTime? lastICloudSyncAt;
+  final void Function({
+    bool? shotReminderEnabled,
+    int? shotReminderWeekday,
+    int? shotReminderHour,
+    int? shotReminderMinute,
+    bool? needlePrepReminderEnabled,
+  }) onReminderChanged;
+  final ValueChanged<bool> onToggleBiometricLock;
+  final ValueChanged<bool> onToggleICloudBackup;
+  final VoidCallback onManualICloudSync;
 
   @override
   Widget build(BuildContext context) {
@@ -906,17 +1176,258 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
     return ListView(
       padding: const EdgeInsets.all(16.0),
       children: <Widget>[
-        
-        // 【工單 8 - 斯蒂格利茨 (Stiglitz) 動態付費牆引流】 
+        // DoseFlow 1.1 智慧週期打卡日曆與本地推播提醒
+        ReminderCalendarCard(
+          logs: logs,
+          shotReminderEnabled: shotReminderEnabled,
+          shotReminderWeekday: shotReminderWeekday,
+          shotReminderHour: shotReminderHour,
+          shotReminderMinute: shotReminderMinute,
+          needlePrepReminderEnabled: needlePrepReminderEnabled,
+          onChanged: onReminderChanged,
+        ),
+        const SizedBox(height: 16),
+
+        // DoseFlow 1.1 資料管理與安全樞紐 (Face ID + iCloud + 醫師 PDF 報表)
+        Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: <Color>[Color(0xFF13253B), Color(0xFF0B1626)],
+            ),
+            borderRadius: const BorderRadius.all(Radius.circular(24)),
+            border: Border.all(
+              color: DoseFlowColors.mint.withValues(alpha: 0.34),
+              width: 1.2,
+            ),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: DoseFlowColors.mint.withValues(alpha: 0.16),
+                      borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    ),
+                    child: const Icon(
+                      Icons.verified_user_rounded,
+                      color: DoseFlowColors.mint,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          isZh ? '資料管理與安全' : 'Privacy & Data Security',
+                          style: const TextStyle(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w800,
+                            color: DoseFlowColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          isZh ? '100% 離線架構 · 零後台追蹤' : '100% Local-First · Zero Tracking',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: DoseFlowColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              // Face ID / Passcode Lock
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: DoseFlowColors.cardElevated,
+                  borderRadius: const BorderRadius.all(Radius.circular(14)),
+                  border: Border.all(color: DoseFlowColors.cardBorder),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    const Icon(Icons.lock_rounded, color: DoseFlowColors.mint, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            isZh ? 'Face ID / 密碼鎖' : 'Face ID / Passcode Lock',
+                            style: const TextStyle(
+                              fontSize: 13.0,
+                              fontWeight: FontWeight.w800,
+                              color: DoseFlowColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            isZh ? '啟動 App 時自動生物辨識解鎖' : 'Protect medical logs on launch',
+                            style: const TextStyle(
+                              fontSize: 11.0,
+                              color: DoseFlowColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: biometricLockEnabled,
+                      onChanged: onToggleBiometricLock,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              // iCloud Automatic Backup
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: DoseFlowColors.cardElevated,
+                  borderRadius: const BorderRadius.all(Radius.circular(14)),
+                  border: Border.all(color: DoseFlowColors.cardBorder),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    const Icon(Icons.cloud_done_rounded, color: DoseFlowColors.cyan, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            isZh ? 'iCloud 自動雲端備份' : 'iCloud Private Backup',
+                            style: const TextStyle(
+                              fontSize: 13.0,
+                              fontWeight: FontWeight.w800,
+                              color: DoseFlowColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            iCloudBackupEnabled
+                                ? (isZh ? '● 已連結 · 僅存於個人加密 Apple 空間' : '● Connected · Private Apple iCloud')
+                                : (isZh ? '僅儲存在本機，開啟可加密同步至個人 iCloud' : 'Local-only; enable for private iCloud sync'),
+                            style: TextStyle(
+                              fontSize: 11.0,
+                              color: iCloudBackupEnabled
+                                  ? DoseFlowColors.cyan
+                                  : DoseFlowColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (iCloudBackupEnabled)
+                      IconButton(
+                        tooltip: isZh ? '立即同步' : 'Sync now',
+                        onPressed: onManualICloudSync,
+                        icon: const Icon(Icons.sync_rounded, color: DoseFlowColors.cyan, size: 20),
+                      ),
+                    Switch(
+                      value: iCloudBackupEnabled,
+                      onChanged: onToggleICloudBackup,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Export Doctor PDF Report quick row
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: DoseFlowColors.cardElevated,
+                  borderRadius: const BorderRadius.all(Radius.circular(14)),
+                  border: Border.all(color: DoseFlowColors.cardBorder),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    const Icon(Icons.picture_as_pdf_rounded, color: DoseFlowColors.amber, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            isZh ? '匯出回診 PDF 報告' : 'Export Doctor PDF Report',
+                            style: const TextStyle(
+                              fontSize: 13.0,
+                              fontWeight: FontWeight.w800,
+                              color: DoseFlowColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            isZh ? '一鍵分享或列印完整劑量與體重報表' : '1-tap clinical summary for your physician',
+                            style: const TextStyle(
+                              fontSize: 11.0,
+                              color: DoseFlowColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    FilledButton(
+                      onPressed: () {
+                        HapticFeedbackService.mediumImpact();
+                        showDialog<void>(
+                          context: context,
+                          builder: (_) => ClinicalExportDialog(
+                            logs: logs,
+                            startWeightKg: startWeightKg,
+                            currentWeightKg: currentWeightKg,
+                          ),
+                        );
+                      },
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      child: Text(isZh ? '點擊匯出' : 'Export', style: const TextStyle(fontSize: 11.5)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                decoration: BoxDecoration(
+                  color: DoseFlowColors.mint.withValues(alpha: 0.08),
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
+                  border: Border.all(color: DoseFlowColors.mint.withValues(alpha: 0.24)),
+                ),
+                child: Text(
+                  isZh
+                      ? '🛡️ 本 App 絕不蒐集或上傳您的個人健康與醫療數據。'
+                      : '🛡️ This app never collects or uploads your personal health records.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFA8D8C8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // 【工單 8 - 斯蒂格利茨 (Stiglitz) 動態付費牆引流】
         Card(
           elevation: 0,
-          color: isProUnlocked
-              ? const Color(0xFF10B981).withValues(alpha: 0.08)
-              : const Color(0xFF0EA5E9).withValues(alpha: 0.08),
+          color: DoseFlowColors.cardSurface,
           shape: RoundedRectangleBorder(
             borderRadius: const BorderRadius.all(Radius.circular(20)),
             side: BorderSide(
-              color: isProUnlocked ? const Color(0xFF10B981).withValues(alpha: 0.35) : const Color(0xFF0EA5E9).withValues(alpha: 0.35),
+              color: isProUnlocked ? DoseFlowColors.mint.withValues(alpha: 0.45) : DoseFlowColors.cyan.withValues(alpha: 0.45),
             ),
           ),
           child: Padding(
@@ -929,7 +1440,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                   children: <Widget>[
                     Icon(
                       isProUnlocked ? Icons.workspace_premium_rounded : Icons.lock_open_rounded,
-                      color: isProUnlocked ? const Color(0xFF10B981) : const Color(0xFF0EA5E9),
+                      color: isProUnlocked ? DoseFlowColors.mint : DoseFlowColors.cyan,
                       size: 26,
                     ),
                     const SizedBox(width: 10),
@@ -940,13 +1451,13 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                             // 未付費時動態依據雙螢幕與痛點推廣：
                             : BehavioralEconomicsEngine.getStiglitzDynamicPaywallHeadline(
                                 lang: lang,
-                                worrySideEffects: true, // 在這裡依據先前的 Global 選擇映射 (示範預設true以觸發最強引導)
+                                worrySideEffects: true,
                                 worryBruising: false,
                                 worryMuscle: true,
                                 worryConcentration: true,
                                 isDuoDevice: isDuo,
                               ),
-                        style: const TextStyle(fontSize: 15.0, fontWeight: FontWeight.w800, color: Color(0xFF0F172A), height: 1.3),
+                        style: const TextStyle(fontSize: 15.0, fontWeight: FontWeight.w800, color: DoseFlowColors.textPrimary, height: 1.3),
                       ),
                     ),
                   ],
@@ -956,7 +1467,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                   isProUnlocked
                       ? BehavioralEconomicsEngine.getAkerlofIdentityBadge(lang)
                       : BehavioralEconomicsEngine.getLossAversionSubtext(lang),
-                  style: const TextStyle(fontSize: 12.0, color: Color(0xFF475569)),
+                  style: const TextStyle(fontSize: 12.0, color: DoseFlowColors.textSecondary),
                 ),
                 const SizedBox(height: 14),
                 PulsingCtaButton(
@@ -966,7 +1477,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                   },
                   icon: Icons.bolt_rounded,
                   label: isProUnlocked ? (isZh ? '管理權益方案' : 'Manage Pro Access') : s.unlockProButton,
-                  color: isProUnlocked ? const Color(0xFF10B981) : const Color(0xFF0EA5E9),
+                  color: isProUnlocked ? DoseFlowColors.mint : DoseFlowColors.cyan,
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -991,7 +1502,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                       icon: const Icon(Icons.restore_rounded, size: 15),
                       label: Text(
                         isZh ? '恢復購買' : 'Restore Purchases',
-                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF0EA5E9), fontWeight: FontWeight.w700),
+                        style: const TextStyle(fontSize: 11.5, color: DoseFlowColors.cyan, fontWeight: FontWeight.w700),
                       ),
                     ),
                     if (kDebugMode)
@@ -1002,7 +1513,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                         },
                         child: Text(
                           isProUnlocked ? (isZh ? '返回免費版' : 'Debug Free') : (isZh ? 'Debug 測試解鎖' : 'Debug Pro'),
-                          style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                          style: const TextStyle(fontSize: 11.5, color: DoseFlowColors.textMuted),
                         ),
                       ),
                   ],
@@ -1012,26 +1523,26 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
           ),
         ),
         const SizedBox(height: 16),
-        
-        // 【工單 3 - 艾克羅夫 (Akerlof) 隱私背書】反檸檬品質防禦宣誓 
+
+        // 【工單 3 - 艾克羅夫 (Akerlof) 隱私背書】反檸檬品質防禦宣誓
         Card(
           elevation: 0,
-          color: Colors.white,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20)), side: BorderSide(color: Color(0xFFE2E8F0))),
+          color: DoseFlowColors.cardSurface,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20)), side: BorderSide(color: DoseFlowColors.cardBorder)),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(BehavioralEconomicsEngine.getAkerlofAntiLemonSignal(lang), style: const TextStyle(fontSize: 13.0, fontWeight: FontWeight.w700, color: Color(0xFF0F172A), height: 1.4)),
+                Text(BehavioralEconomicsEngine.getAkerlofAntiLemonSignal(lang), style: const TextStyle(fontSize: 13.0, fontWeight: FontWeight.w700, color: DoseFlowColors.textPrimary, height: 1.4)),
                 const Divider(height: 24),
                 ...BehavioralEconomicsEngine.getAkerlofTrustGuarantees(lang).map((msg) => Padding(
                   padding: const EdgeInsets.only(bottom: 8.0),
                   child: Row(
                     children: [
-                      const Icon(Icons.shield_rounded, size: 16, color: Color(0xFF10B981)),
+                      const Icon(Icons.shield_rounded, size: 16, color: DoseFlowColors.mint),
                       const SizedBox(width: 8),
-                      Expanded(child: Text(msg, style: const TextStyle(fontSize: 11.5, color: Color(0xFF475569)))),
+                      Expanded(child: Text(msg, style: const TextStyle(fontSize: 11.5, color: DoseFlowColors.textSecondary))),
                     ]
                   ),
                 )),
@@ -1052,16 +1563,16 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
         // 【工單 5 - 席勒 (Shiller) 社群造浪病毒引擎】 食慾安靜度隱私宣告
         Card(
           elevation: 0,
-          color: const Color(0xFFF3F4F6),
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20)), side: BorderSide(color: Color(0xFFE5E7EB))),
+          color: DoseFlowColors.cardSurface,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20)), side: BorderSide(color: DoseFlowColors.cardBorder)),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(BehavioralEconomicsEngine.getShillerNarrativeHook(lang), style: const TextStyle(fontSize: 13.0, fontWeight: FontWeight.w800, color: Color(0xFF4B5563))),
+                Text(BehavioralEconomicsEngine.getShillerNarrativeHook(lang), style: const TextStyle(fontSize: 13.0, fontWeight: FontWeight.w800, color: DoseFlowColors.textPrimary)),
                 const SizedBox(height: 10),
-                Text(BehavioralEconomicsEngine.getShillerViralWatermark(lang), style: const TextStyle(fontSize: 11.0, color: Color(0xFF6B7280))),
+                Text(BehavioralEconomicsEngine.getShillerViralWatermark(lang), style: const TextStyle(fontSize: 11.0, color: DoseFlowColors.textSecondary)),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
@@ -1069,8 +1580,8 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                     onPressed: () {
                       final str = BehavioralEconomicsEngine.generateShillerSilenceCardText(
                         lang: lang,
-                        startWeight: 85.0,
-                        currentWeight: 75.0,
+                        startWeight: startWeightKg,
+                        currentWeight: currentWeightKg,
                         foodNoiseSilenceScore: 5,
                         proteinGoalHitRate: 100,
                       );
@@ -1080,7 +1591,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                     },
                     icon: const Icon(Icons.send_rounded, size: 18),
                     label: Text(isZh ? '發布榮譽心智健康戰報' : 'Copy Shiller Flex Report'),
-                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF374151), padding: const EdgeInsets.symmetric(vertical: 14)),
+                    style: FilledButton.styleFrom(backgroundColor: DoseFlowColors.cardElevated, foregroundColor: DoseFlowColors.textPrimary, padding: const EdgeInsets.symmetric(vertical: 14)),
                   ),
                 ),
               ],
@@ -1091,8 +1602,8 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
 
         Card(
           elevation: 0,
-          color: Colors.white,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20)), side: BorderSide(color: Color(0xFFE2E8F0))),
+          color: DoseFlowColors.cardSurface,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20)), side: BorderSide(color: DoseFlowColors.cardBorder)),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -1100,9 +1611,9 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
               children: <Widget>[
                 Row(
                   children: [
-                    const Icon(Icons.storefront_rounded, color: Color(0xFF8B5CF6), size: 22),
+                    const Icon(Icons.storefront_rounded, color: DoseFlowColors.purple, size: 22),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(s.asoSectionHeader, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)))),
+                    Expanded(child: Text(s.asoSectionHeader, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: DoseFlowColors.textPrimary))),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -1218,7 +1729,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: DoseFlowColors.cardSurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -1245,7 +1756,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                         width: 42,
                         height: 4,
                         decoration: const BoxDecoration(
-                          color: Color(0xFFCBD5E1),
+                          color: DoseFlowColors.cardBorder,
                           borderRadius: BorderRadius.all(Radius.circular(999)),
                         ),
                       ),
@@ -1256,6 +1767,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                       style: const TextStyle(
                         fontSize: 16.5,
                         fontWeight: FontWeight.w900,
+                        color: DoseFlowColors.textPrimary,
                         height: 1.25,
                       ),
                     ),
@@ -1265,14 +1777,14 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                         horizontal: 10,
                         vertical: 4,
                       ),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFEE2E2),
-                        borderRadius: BorderRadius.all(Radius.circular(6)),
+                      decoration: BoxDecoration(
+                        color: DoseFlowColors.danger.withValues(alpha: 0.16),
+                        borderRadius: const BorderRadius.all(Radius.circular(6)),
                       ),
                       child: Text(
                         BehavioralEconomicsEngine.getKahnemanLossFramedHeadline(lang),
                         style: const TextStyle(
-                          color: Color(0xFFB91C1C),
+                          color: Color(0xFFFCA5A5),
                           fontSize: 11.5,
                           fontWeight: FontWeight.w800,
                         ),
@@ -1288,10 +1800,10 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                       child: Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0EA5E9).withValues(alpha: 0.06),
+                          color: DoseFlowColors.mint.withValues(alpha: 0.10),
                           borderRadius: const BorderRadius.all(Radius.circular(16)),
                           border: Border.all(
-                            color: const Color(0xFF0EA5E9),
+                            color: DoseFlowColors.mint,
                             width: 1.8,
                           ),
                         ),
@@ -1299,7 +1811,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                           children: <Widget>[
                             const Icon(
                               Icons.local_fire_department_rounded,
-                              color: Color(0xFF0EA5E9),
+                              color: DoseFlowColors.mint,
                               size: 24,
                             ),
                             const SizedBox(width: 10),
@@ -1312,7 +1824,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                                     style: const TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.w800,
-                                      color: Color(0xFF0284C7),
+                                      color: DoseFlowColors.mint,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -1323,7 +1835,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                                     style: const TextStyle(
                                       fontSize: 13.5,
                                       fontWeight: FontWeight.w800,
-                                      color: Color(0xFF0F172A),
+                                      color: DoseFlowColors.textPrimary,
                                     ),
                                   ),
                                 ],
@@ -1334,7 +1846,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                               style: const TextStyle(
                                 fontWeight: FontWeight.w900,
                                 fontSize: 14,
-                                color: Color(0xFF0284C7),
+                                color: DoseFlowColors.mint,
                               ),
                             ),
                           ],
@@ -1351,15 +1863,16 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
+                          color: DoseFlowColors.cardElevated,
                           borderRadius: const BorderRadius.all(Radius.circular(14)),
-                          border: Border.all(color: const Color(0xFFCBD5E1)),
+                          border: Border.all(color: DoseFlowColors.cardBorder),
                         ),
                         child: Row(
                           children: <Widget>[
                             const Icon(
                               Icons.calendar_month_rounded,
                               size: 20,
-                              color: Color(0xFF475569),
+                              color: DoseFlowColors.textSecondary,
                             ),
                             const SizedBox(width: 10),
                             Expanded(
@@ -1368,7 +1881,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                                 style: const TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF0F172A),
+                                  color: DoseFlowColors.textPrimary,
                                 ),
                               ),
                             ),
@@ -1377,6 +1890,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                               style: const TextStyle(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 13,
+                                color: DoseFlowColors.textPrimary,
                               ),
                             ),
                           ],
@@ -1393,6 +1907,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
+                          color: DoseFlowColors.cardElevated,
                           borderRadius: const BorderRadius.all(Radius.circular(14)),
                           border: Border.all(
                             color: const Color(0xFFD946EF),
@@ -1404,7 +1919,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                             const Icon(
                               Icons.diamond_rounded,
                               size: 20,
-                              color: Color(0xFFD946EF),
+                              color: Color(0xFFE879F9),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
@@ -1416,7 +1931,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                                     style: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w800,
-                                      color: Color(0xFFC026D3),
+                                      color: Color(0xFFF0ABFC),
                                     ),
                                   ),
                                   Text(
@@ -1425,7 +1940,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                                         : 'One-time purchase, lifetime access',
                                     style: const TextStyle(
                                       fontSize: 10.5,
-                                      color: Color(0xFF86198F),
+                                      color: DoseFlowColors.textSecondary,
                                     ),
                                   ),
                                 ],
@@ -1436,6 +1951,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                               style: const TextStyle(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 13,
+                                color: DoseFlowColors.textPrimary,
                               ),
                             ),
                           ],
@@ -1450,7 +1966,7 @@ class SettingsAndPaywallView extends StatelessWidget {  const SettingsAndPaywall
                       ),
                       icon: Icons.assignment_turned_in_rounded,
                       label: BehavioralEconomicsEngine.getSchellingUlyssesContractPledge(lang),
-                      color: const Color(0xFF0F172A),
+                      color: DoseFlowColors.mint,
                     ),
                     const SizedBox(height: 8),
                     Row(

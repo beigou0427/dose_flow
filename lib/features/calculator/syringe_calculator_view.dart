@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/app_localization.dart';
+import '../../core/app_theme.dart';
 import '../../core/pharmacokinetics_engine.dart';
+import '../rotation/body_rotation_map.dart';
 
 /// 針筒換算器雙模式列舉：
 /// 1. premixed: 現成複合藥瓶已標示濃度 (例如 5 mg/mL 或 10 mg/mL)
@@ -700,10 +702,21 @@ class _ShotLogAndCalculatorViewState extends State<ShotLogAndCalculatorView> {
     return ListView(
       padding: const EdgeInsets.all(16.0),
       children: <Widget>[
+        // 0. DoseFlow 1.1 視覺化人體施打部位輪替地圖
+        BodyRotationMapCard(
+          logs: widget.logs,
+          activeDoseMg: _targetDoseMg,
+          activeMedication: _selectedMedication,
+          onConfirmInjection: (InjectionSite site) {
+            setState(() => _selectedSite = site);
+            _handleRecordShot();
+          },
+        ),
+        const SizedBox(height: 16),
         // 1. U-100 針筒單位與複合藥劑換算器卡片
         Card(
           elevation: 0,
-          color: Colors.white,
+          color: DoseFlowColors.cardSurface,
           shape: RoundedRectangleBorder(
             borderRadius: const BorderRadius.all(Radius.circular(20)),
             side: BorderSide(
@@ -740,14 +753,14 @@ class _ShotLogAndCalculatorViewState extends State<ShotLogAndCalculatorView> {
                             style: const TextStyle(
                               fontSize: 15.5,
                               fontWeight: FontWeight.w800,
-                              color: Color(0xFF0F172A),
+                              color: DoseFlowColors.textPrimary,
                             ),
                           ),
                           Text(
                             s.syringeCalcSubtitle,
                             style: const TextStyle(
                               fontSize: 11.5,
-                              color: Color(0xFF64748B),
+                              color: DoseFlowColors.textSecondary,
                             ),
                           ),
                         ],
@@ -760,7 +773,7 @@ class _ShotLogAndCalculatorViewState extends State<ShotLogAndCalculatorView> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF59E0B).withValues(alpha: 0.14),
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.18),
                           borderRadius: const BorderRadius.all(Radius.circular(999)),
                         ),
                         child: Text(
@@ -770,7 +783,7 @@ class _ShotLogAndCalculatorViewState extends State<ShotLogAndCalculatorView> {
                           style: const TextStyle(
                             fontSize: 11.0,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFFB45309),
+                            color: DoseFlowColors.amber,
                           ),
                         ),
                       ),
@@ -827,7 +840,7 @@ class _ShotLogAndCalculatorViewState extends State<ShotLogAndCalculatorView> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
+                      color: DoseFlowColors.cardElevated,
                       borderRadius: const BorderRadius.all(Radius.circular(14)),
                       border: Border.all(
                         color: doseColor.withValues(alpha: 0.4),
@@ -906,7 +919,7 @@ class _ShotLogAndCalculatorViewState extends State<ShotLogAndCalculatorView> {
                     style: const TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF334155),
+                      color: DoseFlowColors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -941,7 +954,7 @@ class _ShotLogAndCalculatorViewState extends State<ShotLogAndCalculatorView> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: const Color(0xFF0A1422),
                     borderRadius: const BorderRadius.all(Radius.circular(16)),
                     border: Border.all(
                       color: calcResult.status ==
@@ -1030,10 +1043,10 @@ class _ShotLogAndCalculatorViewState extends State<ShotLogAndCalculatorView> {
         // 3. 立即打卡施打紀錄卡片
         Card(
           elevation: 0,
-          color: Colors.white,
+          color: DoseFlowColors.cardSurface,
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(20)),
-            side: BorderSide(color: Color(0xFFE2E8F0)),
+            side: BorderSide(color: DoseFlowColors.cardBorder),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -1045,7 +1058,7 @@ class _ShotLogAndCalculatorViewState extends State<ShotLogAndCalculatorView> {
                   style: const TextStyle(
                     fontSize: 15.0,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF0F172A),
+                    color: DoseFlowColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -1122,7 +1135,7 @@ class _ShotLogAndCalculatorViewState extends State<ShotLogAndCalculatorView> {
               style: const TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF334155),
+                color: DoseFlowColors.textSecondary,
               ),
             ),
             Text(

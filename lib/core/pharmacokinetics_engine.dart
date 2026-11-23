@@ -363,7 +363,7 @@ class PharmacokineticsChartPainter extends CustomPainter {
 
     // 4. 繪製垂直「Now（現在）」指示線 (RuleMark) 與當下濃度圓點
     final Paint rulePaint = Paint()
-      ..color = const Color(0xFF0F172A).withValues(alpha: 0.45)
+      ..color = const Color(0xFF2EE59D).withValues(alpha: 0.48)
       ..strokeWidth = 1.4;
     canvas.drawLine(
       Offset(nowOffset.dx, topPad - 6),
@@ -373,13 +373,13 @@ class PharmacokineticsChartPainter extends CustomPainter {
 
     canvas.drawCircle(
       nowOffset,
-      6.5,
-      Paint()..color = primaryColor.withValues(alpha: 0.25),
+      7.5,
+      Paint()..color = const Color(0xFF2EE59D).withValues(alpha: 0.32),
     );
     canvas.drawCircle(
       nowOffset,
-      4.0,
-      Paint()..color = primaryColor,
+      4.5,
+      Paint()..color = const Color(0xFF2EE59D),
     );
 
     final TextPainter tp = TextPainter(
@@ -387,8 +387,8 @@ class PharmacokineticsChartPainter extends CustomPainter {
         text: nowLabel,
         style: const TextStyle(
           fontSize: 10.5,
-          fontWeight: FontWeight.w700,
-          color: Color(0xFF0F172A),
+          fontWeight: FontWeight.w800,
+          color: Color(0xFF2EE59D),
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -406,7 +406,52 @@ class PharmacokineticsChartPainter extends CustomPainter {
   }
 }
 
-/// 首頁核心武器：體內藥物濃度即時曲線卡（含免費版高斯模糊鎖頭 & FDA 1.4.1 免責聲明）
+/// DoseFlow 1.1 圓形藥效濃度百分比儀表板繪圖器
+class _ConcentrationGaugePainter extends CustomPainter {
+  const _ConcentrationGaugePainter({required this.ratio});
+
+  final double ratio;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Offset center = Offset(size.width / 2, size.height / 2);
+    final double radius = math.min(size.width, size.height) / 2 - 12;
+
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = const Color(0xFF193047)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 11.0,
+    );
+
+    final Rect rect = Rect.fromCircle(center: center, radius: radius);
+    final Paint arcPaint = Paint()
+      ..shader = const SweepGradient(
+        startAngle: -math.pi / 2,
+        endAngle: math.pi * 1.5,
+        colors: <Color>[
+          Color(0xFF2EE59D),
+          Color(0xFF00C9B8),
+          Color(0xFF00B4D8),
+          Color(0xFF2EE59D),
+        ],
+      ).createShader(rect)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 11.0
+      ..strokeCap = StrokeCap.round;
+
+    final double sweep = math.pi * 2 * ratio.clamp(0.04, 1.0);
+    canvas.drawArc(rect, -math.pi / 2, sweep, false, arcPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ConcentrationGaugePainter old) =>
+      old.ratio != ratio;
+}
+
+/// 首頁核心武器：體內藥物濃度即時曲線卡（DoseFlow 1.1 Deep Medical Sci-Fi 圓形儀表 + Bateman 曲線）
 class DoseConcentrationCard extends StatelessWidget {
   const DoseConcentrationCard({
     super.key,
@@ -423,9 +468,24 @@ class DoseConcentrationCard extends StatelessWidget {
   final VoidCallback onToggleProPreview;
   final VoidCallback? onOpenSwiftCodeDialog;
 
+  /// 根據 Bateman 序列計算當前體內相對高峰百分比 (0~100%)
+  static int computeConcentrationPercent({
+    required double currentMg,
+    required List<ConcentrationPoint> series,
+  }) {
+    if (series.isEmpty || currentMg <= 0) return 0;
+    double maxVal = 0.0;
+    for (final ConcentrationPoint pt in series) {
+      if (pt.estimatedMg > maxVal) maxVal = pt.estimatedMg;
+    }
+    if (maxVal <= 0.0001) return 0;
+    return ((currentMg / maxVal) * 100.0).round().clamp(1, 100);
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppStrings s = context.strings;
+    final bool isZh = context.locale.isZh;
     final double currentMg = PharmacokineticsEngine.totalConcentrationAt(
       queryTime: now,
       logs: logs,
@@ -435,19 +495,22 @@ class DoseConcentrationCard extends StatelessWidget {
       logs: logs,
       now: now,
     );
-    final double latestDose = logs.isNotEmpty ? logs.first.doseMg : 5.0;
-    final Color themeColor = PharmacokineticsEngine.colorForDose(latestDose);
+    final int percent = computeConcentrationPercent(
+      currentMg: currentMg,
+      series: series,
+    );
+    const Color accentMint = Color(0xFF2EE59D);
 
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: const BorderRadius.all(Radius.circular(20)),
+        borderRadius: const BorderRadius.all(Radius.circular(24)),
         side: BorderSide(
-          color: themeColor.withValues(alpha: 0.28),
+          color: accentMint.withValues(alpha: 0.30),
           width: 1.2,
         ),
       ),
-      color: Colors.white,
+      color: const Color(0xFF101F33),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -458,12 +521,12 @@ class DoseConcentrationCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: themeColor.withValues(alpha: 0.12),
+                    color: accentMint.withValues(alpha: 0.14),
                     borderRadius: const BorderRadius.all(Radius.circular(12)),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.trending_up_rounded,
-                    color: themeColor,
+                    color: accentMint,
                     size: 22,
                   ),
                 ),
@@ -475,16 +538,16 @@ class DoseConcentrationCard extends StatelessWidget {
                       Text(
                         s.pkChartCardTitle,
                         style: const TextStyle(
-                          fontSize: 15.5,
+                          fontSize: 15.0,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
+                          color: Color(0xFFF4F9FF),
                         ),
                       ),
                       Text(
                         s.pkChartCardSubtitle,
                         style: const TextStyle(
-                          fontSize: 12.0,
-                          color: Color(0xFF64748B),
+                          fontSize: 11.5,
+                          color: Color(0xFFA0B2C6),
                         ),
                       ),
                     ],
@@ -494,25 +557,113 @@ class DoseConcentrationCard extends StatelessWidget {
                   IconButton(
                     tooltip: 'Swift Charts Native Code',
                     onPressed: onOpenSwiftCodeDialog,
-                    icon: const Icon(Icons.code_rounded, size: 20),
+                    icon: const Icon(
+                      Icons.code_rounded,
+                      size: 20,
+                      color: Color(0xFFA0B2C6),
+                    ),
                   ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+            // DoseFlow 1.1 Radial Concentration Gauge + Medication Support Pill
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               decoration: BoxDecoration(
-                color: themeColor.withValues(alpha: 0.08),
-                borderRadius: const BorderRadius.all(Radius.circular(10)),
+                color: const Color(0xFF0A1422),
+                borderRadius: const BorderRadius.all(Radius.circular(18)),
+                border: Border.all(color: const Color(0xFF203854)),
               ),
-              child: Text(
-                s.formatCurrentConcentration(currentMg),
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: themeColor,
-                ),
+              child: Row(
+                children: <Widget>[
+                  SizedBox(
+                    width: 108,
+                    height: 108,
+                    child: CustomPaint(
+                      painter: _ConcentrationGaugePainter(ratio: percent / 100),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Text(
+                              '$percent%',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFFF4F9FF),
+                              ),
+                            ),
+                            Text(
+                              isZh ? '估計濃度' : 'Est. Level',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: accentMint,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF00B4D8).withValues(alpha: 0.14),
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(999)),
+                            border: Border.all(
+                              color: const Color(0xFF00B4D8)
+                                  .withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Text(
+                            isZh
+                                ? '支援猛健樂 / 善纖達 / 週纖達'
+                                : 'Mounjaro / Wegovy / Saxenda',
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF7BE3FF),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          s.formatCurrentConcentration(currentMg),
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: accentMint,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: <Widget>[
+                            _phaseTag(
+                              isZh ? '高峰期 (藥效最強) 📈' : 'Peak (Tmax) 📈',
+                              accentMint,
+                            ),
+                            _phaseTag(
+                              isZh ? '代謝期 📉' : 'Decay Phase 📉',
+                              const Color(0xFF00D2FF),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 14),
@@ -531,7 +682,7 @@ class DoseConcentrationCard extends StatelessWidget {
                     child: CustomPaint(
                       painter: PharmacokineticsChartPainter(
                         series: series,
-                        primaryColor: themeColor,
+                        primaryColor: accentMint,
                         nowLabel: s.nowMarkerLabel,
                       ),
                     ),
@@ -542,16 +693,20 @@ class DoseConcentrationCard extends StatelessWidget {
                     margin: const EdgeInsets.symmetric(horizontal: 12),
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.92),
+                      color: const Color(0xFF0D1B2E).withValues(alpha: 0.94),
                       borderRadius: const BorderRadius.all(Radius.circular(16)),
                       border: Border.all(
-                        color: themeColor.withValues(alpha: 0.35),
+                        color: accentMint.withValues(alpha: 0.4),
                       ),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        Icon(Icons.lock_rounded, color: themeColor, size: 26),
+                        const Icon(
+                          Icons.lock_rounded,
+                          color: accentMint,
+                          size: 26,
+                        ),
                         const SizedBox(height: 6),
                         Text(
                           s.proBlurLockTitle,
@@ -559,7 +714,7 @@ class DoseConcentrationCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A),
+                            color: Color(0xFFF4F9FF),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -568,7 +723,7 @@ class DoseConcentrationCard extends StatelessWidget {
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 11.5,
-                            color: Color(0xFF475569),
+                            color: Color(0xFFA0B2C6),
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -577,7 +732,8 @@ class DoseConcentrationCard extends StatelessWidget {
                           icon: const Icon(Icons.bolt_rounded, size: 18),
                           label: Text(s.unlockProButton),
                           style: FilledButton.styleFrom(
-                            backgroundColor: themeColor,
+                            backgroundColor: accentMint,
+                            foregroundColor: const Color(0xFF041A18),
                           ),
                         ),
                       ],
@@ -593,10 +749,17 @@ class DoseConcentrationCard extends StatelessWidget {
                 Expanded(
                   child: TextButton.icon(
                     onPressed: () => _showMedicalCitationsModal(context),
-                    icon: const Icon(Icons.verified_user_outlined, size: 16),
+                    icon: const Icon(
+                      Icons.verified_user_outlined,
+                      size: 16,
+                      color: Color(0xFFA0B2C6),
+                    ),
                     label: Text(
                       s.medicalDisclaimerButtonLabel,
-                      style: const TextStyle(fontSize: 11.5),
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: Color(0xFFA0B2C6),
+                      ),
                     ),
                   ),
                 ),
@@ -606,12 +769,35 @@ class DoseConcentrationCard extends StatelessWidget {
                     isProUnlocked
                         ? context.locale.tr('切換免費模糊預覽', 'Preview Free Blur')
                         : context.locale.tr('免費預覽 Pro', 'Preview Pro'),
-                    style: const TextStyle(fontSize: 11.5),
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: accentMint,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  static Widget _phaseTag(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: const BorderRadius.all(Radius.circular(8)),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10.0,
+          fontWeight: FontWeight.w700,
+          color: color,
         ),
       ),
     );

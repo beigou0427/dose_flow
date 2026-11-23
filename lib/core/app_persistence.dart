@@ -16,7 +16,15 @@ class AppStorageSnapshot {
     required this.startWeightKg,
     required this.targetWeightKg,
     required this.lastSavedTimestamp,
-    this.schemaVersion = 1,
+    this.shotReminderEnabled = true,
+    this.shotReminderWeekday = DateTime.friday,
+    this.shotReminderHour = 8,
+    this.shotReminderMinute = 30,
+    this.needlePrepReminderEnabled = true,
+    this.biometricLockEnabled = false,
+    this.iCloudBackupEnabled = false,
+    this.lastICloudSyncAt,
+    this.schemaVersion = 2,
   });
 
   final List<InjectionRecord> logs;
@@ -28,6 +36,14 @@ class AppStorageSnapshot {
   final double startWeightKg;
   final double targetWeightKg;
   final DateTime lastSavedTimestamp;
+  final bool shotReminderEnabled;
+  final int shotReminderWeekday;
+  final int shotReminderHour;
+  final int shotReminderMinute;
+  final bool needlePrepReminderEnabled;
+  final bool biometricLockEnabled;
+  final bool iCloudBackupEnabled;
+  final DateTime? lastICloudSyncAt;
   final int schemaVersion;
 
   /// 預設初始臨床數據快照
@@ -40,7 +56,7 @@ class AppStorageSnapshot {
           timestamp: now.subtract(const Duration(days: 2, hours: 4)),
           medication: Glp1Medication.tirzepatide,
           doseMg: 2.5,
-          site: InjectionSite.rightLowerAbdomen,
+          site: InjectionSite.leftLowerAbdomen,
           painLevel: 1,
         ),
       ],
@@ -49,10 +65,17 @@ class AppStorageSnapshot {
       dailyWaterMl: 1250,
       targetWaterMl: 2500,
       bowelCompletedToday: false,
-      startWeightKg: 85.0,
+      startWeightKg: 82.0,
       targetWeightKg: 70.0,
       lastSavedTimestamp: now,
-      schemaVersion: 1,
+      shotReminderEnabled: true,
+      shotReminderWeekday: DateTime.friday,
+      shotReminderHour: 8,
+      shotReminderMinute: 30,
+      needlePrepReminderEnabled: true,
+      biometricLockEnabled: false,
+      iCloudBackupEnabled: false,
+      schemaVersion: 2,
     );
   }
 
@@ -67,6 +90,14 @@ class AppStorageSnapshot {
       'bowelCompletedToday': bowelCompletedToday,
       'startWeightKg': startWeightKg,
       'targetWeightKg': targetWeightKg,
+      'shotReminderEnabled': shotReminderEnabled,
+      'shotReminderWeekday': shotReminderWeekday,
+      'shotReminderHour': shotReminderHour,
+      'shotReminderMinute': shotReminderMinute,
+      'needlePrepReminderEnabled': needlePrepReminderEnabled,
+      'biometricLockEnabled': biometricLockEnabled,
+      'iCloudBackupEnabled': iCloudBackupEnabled,
+      'lastICloudSyncAt': lastICloudSyncAt?.toIso8601String(),
       'logs': logs.map((InjectionRecord r) {
         return <String, dynamic>{
           'id': r.id,
@@ -126,8 +157,22 @@ class AppStorageSnapshot {
       dailyWaterMl: map['dailyWaterMl'] as int? ?? 0,
       targetWaterMl: map['targetWaterMl'] as int? ?? 2500,
       bowelCompletedToday: map['bowelCompletedToday'] as bool? ?? false,
-      startWeightKg: (map['startWeightKg'] as num?)?.toDouble() ?? 85.0,
+      startWeightKg: (map['startWeightKg'] as num?)?.toDouble() ?? 82.0,
       targetWeightKg: (map['targetWeightKg'] as num?)?.toDouble() ?? 70.0,
+      shotReminderEnabled: map['shotReminderEnabled'] as bool? ?? true,
+      shotReminderWeekday:
+          ((map['shotReminderWeekday'] as int?) ?? DateTime.friday).clamp(1, 7),
+      shotReminderHour:
+          ((map['shotReminderHour'] as int?) ?? 8).clamp(0, 23),
+      shotReminderMinute:
+          ((map['shotReminderMinute'] as int?) ?? 30).clamp(0, 59),
+      needlePrepReminderEnabled:
+          map['needlePrepReminderEnabled'] as bool? ?? true,
+      biometricLockEnabled: map['biometricLockEnabled'] as bool? ?? false,
+      iCloudBackupEnabled: map['iCloudBackupEnabled'] as bool? ?? false,
+      lastICloudSyncAt: map['lastICloudSyncAt'] is String
+          ? DateTime.tryParse(map['lastICloudSyncAt'] as String)
+          : null,
       logs: parsedLogs.isNotEmpty ? parsedLogs : AppStorageSnapshot.initial().logs,
     );
   }

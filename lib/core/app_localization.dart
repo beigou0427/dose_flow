@@ -360,10 +360,10 @@ class LanguageTogglePill extends StatelessWidget {
               vertical: 5.0,
             ),
             decoration: BoxDecoration(
-              color: const Color(0xFF0EA5E9).withValues(alpha: 0.12),
+              color: const Color(0xFF2EE59D).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(999),
               border: Border.all(
-                color: const Color(0xFF0EA5E9).withValues(alpha: 0.38),
+                color: const Color(0xFF2EE59D).withValues(alpha: 0.38),
                 width: 1.2,
               ),
             ),
@@ -393,7 +393,7 @@ class LanguageTogglePill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7.0, vertical: 3.0),
       decoration: BoxDecoration(
         color: active
-            ? const Color(0xFF0EA5E9)
+            ? const Color(0xFF2EE59D)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(999),
       ),
@@ -401,8 +401,8 @@ class LanguageTogglePill extends StatelessWidget {
         label,
         style: TextStyle(
           fontSize: 11.5,
-          fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-          color: active ? Colors.white : const Color(0xFF334155),
+          fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+          color: active ? const Color(0xFF041A18) : const Color(0xFFA0B2C6),
         ),
       ),
     );
