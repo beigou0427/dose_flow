@@ -56,7 +56,7 @@ class AscV101AsoEngine {
     <String, String>{
       'locale': 'zh-Hant',
       'keywords':
-          '瘦瘦筆,減重,減肥,體重,打針,針筒,刻度,半衰期,藥效,濃度,曲線,部位,輪替,劑量,提醒,日曆,蛋白質,喝水,便秘,反胃,隱私,離線,計算,自費,瘦身,減脂,代謝,追蹤,記錄,日記,排程',
+          '瘦瘦筆,減肥,打針,針筒,刻度,半衰期,劑量,提醒,日曆,蛋白質,喝水,便秘,反胃,隱私,離線,計算,自費,瘦身,減脂,代謝,排程,食慾,噁心,掉肌,肌肉,回診,PDF,換算,混水,胜肽,體脂,BMI',
       'promotionalText':
           'FDA 仿單雙指數藥動學模型：10 秒記錄體內殘留濃度與 U-100 針筒格數。100% 本地離線不連網、支援 Face ID 隱私鎖與回診 PDF 報表，立即享 3 天免費試用。',
       'whatsNew':
@@ -83,7 +83,7 @@ class AscV101AsoEngine {
     <String, String>{
       'locale': 'en-US',
       'keywords':
-          'tirzepatide,semaglutide,glp1,peptide,u100,syringe,half,life,compound,vial,bac,water,rotation,log',
+          'tirzepatide,semaglutide,syringe,compound,vial,bac,rotation,log,dosage,site,schedule,reminder,diary',
       'promotionalText':
           'Track live GLP-1 half-life levels & U-100 syringe units in 10 seconds. 100% local privacy with Face ID lock, reminder calendar & 1-tap Doctor PDF. Try 3 days free.',
       'whatsNew':
@@ -159,8 +159,14 @@ TERMS OF USE & PRIVACY:
       if (keywords.toLowerCase().contains('shotsy') || desc.contains('#1')) {
         throw StateError('ASO 合規檢查失敗：包含競品字或未佐證排名宣稱 [$locale]');
       }
+      // Verify zero duplicate terms inside keywords itself
+      final List<String> terms =
+          keywords.split(',').map((String t) => t.toLowerCase()).toList();
+      if (terms.toSet().length != terms.length) {
+        throw StateError('ASO 關鍵字內部有重複詞 [$locale]');
+      }
     }
-    stdout.writeln('🟢 [0/3] ASO 合規預檢 100% 通過（無競品字、無 #1 宣稱、無標題商標、字數達標）！');
+    stdout.writeln('🟢 [0/3] ASO 100 分合規與去重預檢全數通過！');
   }
 
   static Future<void> run() async {
@@ -270,8 +276,9 @@ TERMS OF USE & PRIVACY:
       }
     }
 
-    // 2. 建立或鎖定 Version 1.0.1 草稿
-    stdout.writeln('\n📡 [2/3] 取得或建立 iOS Version 1.0.1 草稿版本...');
+    // 2. 建立或鎖定並對齊 iOS Version 1.1.0 草稿
+    const String targetVersion = '1.1.0';
+    stdout.writeln('\n📡 [2/3] 取得或建立 iOS Version $targetVersion 草稿版本...');
     String? v101Id;
     final http.Response versRes = await http.get(
       Uri.parse(
@@ -290,7 +297,30 @@ TERMS OF USE & PRIVACY:
           vm['attributes'] as Map<String, dynamic>;
       if (attrs['appStoreState'] == 'PREPARE_FOR_SUBMISSION') {
         v101Id = vm['id'].toString();
-        stdout.writeln('  🟢 鎖定既有草稿版本: ${attrs['versionString']} (ID: $v101Id)');
+        final String currentVer = attrs['versionString'].toString();
+        stdout.writeln('  🟢 鎖定既有草稿版本: $currentVer (ID: $v101Id)');
+        if (currentVer != targetVersion) {
+          final http.Response patchVerRes = await http.patch(
+            Uri.parse('$baseUrl/v1/appStoreVersions/$v101Id'),
+            headers: headers,
+            body: jsonEncode(<String, dynamic>{
+              'data': <String, dynamic>{
+                'type': 'appStoreVersions',
+                'id': v101Id,
+                'attributes': <String, dynamic>{
+                  'versionString': targetVersion,
+                },
+              },
+            }),
+          );
+          final String icon =
+              patchVerRes.statusCode >= 200 && patchVerRes.statusCode < 300
+                  ? '🟢'
+                  : '⚠️';
+          stdout.writeln(
+            '  $icon 草稿版本號同步 $currentVer → $targetVersion 回應 [${patchVerRes.statusCode}]',
+          );
+        }
         break;
       }
     }
@@ -304,7 +334,7 @@ TERMS OF USE & PRIVACY:
             'type': 'appStoreVersions',
             'attributes': const <String, dynamic>{
               'platform': 'IOS',
-              'versionString': '1.0.1',
+              'versionString': targetVersion,
               'copyright': '© 2026 DoseFlow Inc.',
             },
             'relationships': <String, dynamic>{
@@ -319,17 +349,17 @@ TERMS OF USE & PRIVACY:
         v101Id = ((jsonDecode(createRes.body) as Map<String, dynamic>)['data']
                 as Map<String, dynamic>)['id']
             .toString();
-        stdout.writeln('  🟢 成功建立全新 Version 1.0.1 草稿版本 (ID: $v101Id)');
+        stdout.writeln('  🟢 成功建立全新 Version $targetVersion 草稿版本 (ID: $v101Id)');
       } else {
         stderr.writeln(
-          '  🔴 建立 Version 1.0.1 失敗 [${createRes.statusCode}]: ${createRes.body}',
+          '  🔴 建立 Version $targetVersion 失敗 [${createRes.statusCode}]: ${createRes.body}',
         );
         return;
       }
     }
 
-    // 3. 灌入 1.0.1 雙語 + es-MX ASO 關鍵字、描述與 What's New
-    stdout.writeln('\n📡 [3/3] 灌入 1.0.1 高權重關鍵字、長描述與 What\'s New...');
+    // 3. 灌入 1.1.0 雙語 + es-MX 零重複高權重關鍵字、描述與 What's New
+    stdout.writeln('\n📡 [3/3] 灌入 $targetVersion 零重複高權重關鍵字、長描述與 What\'s New...');
     final http.Response verLocRes = await http.get(
       Uri.parse(
         '$baseUrl/v1/appStoreVersions/$v101Id/appStoreVersionLocalizations',
