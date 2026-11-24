@@ -115,10 +115,10 @@ class AppStrings {
   String get appTitle => _zh ? '瘦瘦針紀錄 Pro' : 'DoseFlow: GLP-1 Tracker';
   String get appSubtitle => _zh
       ? 'GLP-1 代謝曲線 ＆ 防掉肌微習慣'
-      : 'Pharmacokinetics & Peptide Log';
+      : 'GLP-1 Shot Diary & Half-Life Log';
 
   String get tabDashboard => _zh ? '今日儀表板' : 'Dashboard';
-  String get tabShotLog => _zh ? '施打與換算' : 'Shot & Calc';
+  String get tabShotLog => _zh ? '施打紀錄' : 'Shot Log';
   String get tabAnalytics => _zh ? '劑量與體重' : 'Analytics';
   String get tabSettings => _zh ? '小工具與設定' : 'Widgets & Pro';
 
@@ -190,39 +190,13 @@ class AppStrings {
   String get priceLifetimeLabel =>
       _zh ? '終身買斷：NT\$ 1,990（一次付費永久解鎖）' : r'Lifetime Unlock: $79.99 (One-time purchase)';
 
-  // --- Tab 2: 施打日誌與複合針筒計算機 (ShotLog & Syringe Calculator) ---
-  String get syringeCalcTitle => _zh
-      ? '針筒單位與複合藥劑換算器 (U-100)'
-      : 'Syringe Units & Peptide Calculator (U-100)';
-  String get syringeCalcSubtitle => _zh
-      ? '輸入藥瓶濃度或乾粉泡製比例，自動畫出 100 Units 胰島素針筒抽取格數'
-      : 'Convert vial concentration or reconstituted peptide into exact U-100 insulin syringe units.';
-
-  String get calcModePremixed =>
-      _zh ? '現成藥液 (mg/mL)' : 'Pre-mixed Vial (mg/mL)';
-  String get calcModeReconstitution =>
-      _zh ? '乾粉泡製 (乾粉 mg + 抑菌水 mL)' : 'Reconstitution (Vial mg + BAC Water mL)';
-
-  String get inputVialMassLabel =>
-      _zh ? '藥瓶乾粉總量 (mg)' : 'Peptide Vial Mass (mg)';
-  String get inputBacteriostaticWaterLabel =>
-      _zh ? '加入抑菌水量 (mL)' : 'Bacteriostatic Water Added (mL)';
-  String get inputConcentrationLabel =>
-      _zh ? '藥瓶標示濃度 (mg/mL)' : 'Vial Concentration (mg/mL)';
-  String get inputTargetDoseLabel =>
-      _zh ? '預計施打劑量 (mg)' : 'Desired Dose to Inject (mg)';
-
-  String formatSyringeInstruction(double units, double volumeMl) => _zh
-      ? '請抽取至第 ${units.toStringAsFixed(1)} 格 (${units.toStringAsFixed(1)} Units / ${volumeMl.toStringAsFixed(2)} mL)'
-      : 'Draw to ${units.toStringAsFixed(1)} Units (${volumeMl.toStringAsFixed(2)} mL mark on U-100 syringe)';
-
-  String get syringeOverCapacityWarning => _zh
-      ? '⚠️ 警告：所需體積超過單支 100 Units (1.0 mL) 針筒上限！請重新確認藥瓶濃度或諮詢處方醫師，切勿盲目抽取。'
-      : '⚠️ Warning: Required volume exceeds a standard 100-Unit (1.0 mL) syringe! Verify vial concentration or consult your prescriber.';
-
-  String get syringeInvalidInputWarning => _zh
-      ? '⚠️ 請輸入大於 0 的有效數值（嚴禁除以零或負數劑量）。'
-      : '⚠️ Please enter valid positive numbers greater than zero.';
+  // --- Tab 2: 施打日誌與部位輪替 (ShotLog & Site Rotation) ---
+  String get shotLogSectionTitle => _zh
+      ? '個人施打日誌與部位輪替'
+      : 'Personal Shot Log & Site Rotation';
+  String get shotLogSectionSubtitle => _zh
+      ? '記錄您的處方施打紀錄與部位輪替，本程式不提供劑量計算或調劑建議'
+      : 'Log your prescribed injections and rotate sites. This app does not calculate dosages.';
 
   // --- Tab 3: 體重與劑量染色分析 (Analytics & Export) ---
   String get analyticsChartTitle => _zh
@@ -245,8 +219,8 @@ class AppStrings {
       : 'Medical Disclaimer & Pharmacokinetic Citations';
 
   String get medicalDisclaimerBody => _zh
-      ? '本應用程式（瘦瘦針紀錄 Pro / DoseFlow）僅作為個人健康數據日誌與一般教育資訊參考。所有體內藥物濃度曲線皆為基於公開 FDA 藥品仿單（Section 12.3 Pharmacokinetics）半衰期參數之雙指數理論數學推估（Bateman Function），不代表實際血液檢測濃度。本程式絕不主動推薦或指導任何劑量調整；任何施打劑量變更、針筒抽取確認或副作用處理，請務必諮詢您的處方醫師或專業藥師。'
-      : 'DoseFlow is intended solely for personal health logging and educational reference. All medication concentration curves are theoretical mathematical estimates (Bateman Function) derived from published FDA Prescribing Information (Section 12.3 Pharmacokinetics) half-life parameters and do NOT represent actual blood plasma measurements. This app never recommends dose changes. Always consult your prescribing physician or licensed pharmacist before adjusting your dose or drawing medication.';
+      ? '本應用程式（瘦瘦針紀錄 Pro / DoseFlow）僅作為個人健康數據日誌與一般教育資訊參考。所有體內藥物濃度曲線皆為基於公開 FDA 藥品仿單（Section 12.3 Pharmacokinetics）半衰期參數之雙指數理論數學推估（Bateman Function），不代表實際血液檢測濃度。本程式不包含任何劑量計算器，亦絕不主動推薦或指導任何劑量調整；任何施打劑量變更或副作用處理，請務必諮詢您的處方醫師或專業藥師。'
+      : 'DoseFlow is intended solely for personal health logging and educational reference. All medication concentration curves are theoretical mathematical estimates (Bateman Function) derived from published FDA Prescribing Information (Section 12.3 Pharmacokinetics) half-life parameters and do NOT represent actual blood plasma measurements. This app does not calculate dosages and never recommends dose changes. Always consult your prescribing physician or licensed pharmacist before adjusting your medication.';
 
   String get fdaCitationTirzepatide =>
       '1. Eli Lilly Mounjaro/Zepbound (Tirzepatide) USPI Section 12.3: Mean half-life ~5 days (120 hours), Tmax 8–72 hours.';
@@ -265,42 +239,42 @@ class AppStrings {
       : 'US & Taiwan App Store ASO Copy & Screenshot Headlines';
 
   String get asoAppName => _zh
-      ? '瘦瘦針紀錄 Pro - 猛健樂/週纖達代謝曲線與微習慣'
-      : 'DoseFlow: GLP-1 & Shot Tracker';
+      ? '瘦瘦針紀錄 Pro - GLP-1 減重週期管理'
+      : 'DoseFlow - GLP-1 Shot Tracker';
 
   String get asoSubtitle => _zh
-      ? '即時體內殘留濃度、部位輪替與防掉肌蛋白質追蹤'
-      : 'Peptide Calculator, PK Levels & Weight Log';
+      ? '注射部位輪替、藥效濃度曲線與體重追蹤日記'
+      : 'Site Rotation & Half-Life Log';
 
   List<String> get asoScreenshotHeadlines => _zh
       ? const <String>[
-          '圖 1：即時體內藥物濃度曲線 — 掌握每一針半衰期與未來 7 天殘留預測',
-          '圖 2：劑量染色體重折線圖 — 一眼看懂 2.5mg 升 5mg 後的減重斜率變化',
+          '圖 1：即時體內藥物濃度曲線 — 掌握每一針半衰期與未來 7 天變化趨勢',
+          '圖 2：劑量染色體重折線圖 — 一眼看懂各療程階段的體重變化斜率',
           '圖 3：防掉肌蛋白質＆飲水三環 — 瘦身不瘦肌，一鍵打卡預防打針便祕',
-          '圖 4：人體部位輪替熱力圖 — 自動避開上次部位，告別肚皮硬塊與瘀青',
-          '圖 5：U-100 針筒單位換算器 — 輸入濃度即刻繪出精準抽取格數與回診報表',
+          '圖 4：人體部位輪替視覺地圖 — 自動避開上次部位，溫和輪替更安心',
+          '圖 5：智慧週期打卡日曆與回診摘要 — 本機隱私守護＋一鍵匯出回診報告',
         ]
       : const <String>[
-          'Shot 1: Live GLP-1 Concentration Curve — Track Half-Life & 7-Day Decay Forecast',
-          'Shot 2: Peptides & U-100 Syringe Calculator — Exact Units for Compounded Vials',
-          'Shot 3: Dose-Colored Weight Chart — Visualize How Each Titration Drives Progress',
+          'Shot 1: Live GLP-1 Half-Life Curve — Visualize Past & 7-Day Decay Trends',
+          'Shot 2: Visual Injection Site Rotation — Auto-Rotate Away From Your Last Site',
+          'Shot 3: Dose-Colored Weight Chart — Track Progress Across Every Phase',
           'Shot 4: Anti-Muscle Loss Habit Rings — Hit Daily Protein, Hydration & Gut Goals',
-          'Shot 5: Smart Injection Site Rotation — Prevent Bruising & Export Doctor PDF',
+          'Shot 5: Smart Weekly Calendar & Doctor PDF — 100% Local-First Privacy',
         ];
 
   String get asoFullDescription => _zh
-      ? '正在施打猛健樂 (Mounjaro)、週纖達 (Wegovy) 或善纖達 (Ozempic/Saxenda) 嗎？\n'
-          '【瘦瘦針紀錄 Pro】是專為 GLP-1 減重療程打造的 100% 私密本地端健康管家：\n'
-          '• 雙指數藥物動力學引擎：採用 Bateman Function 真實模擬打針後前 36-48 小時吸收爬升段與半衰期指數衰減，支援 60 天多劑疊加計算。\n'
-          '• 防硬塊部位自動輪替：腹部四象限、大腿、上臂視覺化紀錄，自動推薦下次施打點。\n'
-          '• 防掉肌微習慣三環：依據體重自動計算每日蛋白質與飲水目標，內建順暢排便打卡。\n'
+      ? '正在進行每週 GLP-1 體重管理療程嗎？\n'
+          '【瘦瘦針紀錄 Pro】是專為 GLP-1 減重週期打造的 100% 私密本地端健康管家：\n'
+          '• 雙指數藥物動力學視覺化：依據公開 FDA 仿單半衰期參數，以 Bateman 理論模型呈現體內濃度趨勢。\n'
+          '• 視覺化部位輪替地圖：腹部、大腿與上臂紀錄，自動標示上次部位並提醒避開肚臍 5 公分。\n'
+          '• 防掉肌微習慣三環：每日蛋白質與飲水目標打卡，搭配排便與食慾噪音日誌。\n'
           '• 100% 隱私安全：零伺服器上傳，所有紀錄僅保存在您的 iPhone 與私人 iCloud。'
-      : 'Taking Mounjaro, Zepbound, Wegovy, Ozempic, or Compounded GLP-1 peptides?\n'
-          'DoseFlow is the #1 privacy-first GLP-1 companion built on real pharmacokinetics:\n'
-          '• Live Bateman PK Engine: See your real-time absorption peak (Tmax) and half-life decay with 60-day multi-dose superposition.\n'
-          '• U-100 Syringe & Peptide Calculator: Effortlessly convert mg/mL or reconstituted vials into exact insulin syringe units.\n'
-          '• Dose-Colored Weight Analytics: Correlate your weight-loss slope with 2.5mg, 5mg, 7.5mg+ titrations and food-noise suppression.\n'
-          '• 100% Local-First Privacy: Zero external servers. Syncs privately via iCloud & Apple HealthKit.';
+      : 'Following a weekly GLP-1 wellness routine?\n'
+          'DoseFlow is a privacy-first GLP-1 shot diary and habit companion:\n'
+          '• Live Bateman Half-Life Visualization: Visualize theoretical absorption peaks and decay trends based on published FDA Prescribing Information.\n'
+          '• Visual Injection Site Rotation: Track abdomen, thigh, and upper arm sites to avoid repeating the same spot.\n'
+          '• Dose-Colored Weight & Habit Analytics: Correlate your weight-loss journey with logged doses, protein, hydration, and food-noise check-ins.\n'
+          '• 100% Local-First Privacy: Zero external servers. Optional private iCloud backup & Face ID lock.';
 }
 
 /// 全域雙語狀態注入器 (InheritedNotifier 架構，切換語系時自動重繪子樹)

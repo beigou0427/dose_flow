@@ -24,10 +24,12 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
-	<string>使用 Face ID 保護您的個人施打紀錄與健康數據隱私。</string>
+	<string>Use Face ID to protect your private injection logs and health data. 使用 Face ID 保護您的個人施打紀錄與健康數據隱私。</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

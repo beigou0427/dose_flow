@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app_localization.dart';
+import 'app_theme.dart';
 import 'pharmacokinetics_engine.dart';
 
 /// 匯出報表格式枚舉
@@ -287,12 +288,12 @@ class ClinicalExportService {
     <!-- 醫師轉介浮水印與 B2B2C 病毒循環 -->
     <div class="footer">
       <div>
-        <span class="referral-badge">Clinician Partner Ready</span>
+        <span class="referral-badge">Personal Visit Summary</span>
         <span style="margin-left: 8px;">${isZh ? "病患使用 DoseFlow 100% 本地端記錄，無伺服器隱私外洩風險。" : "100% Local-First. Zero cloud servers. Private to patient."}</span>
       </div>
       <div style="text-align: right;">
-        <strong>https://doseflow.app</strong><br>
-        <span style="font-size: 10px;">${isZh ? "醫師專用病患衛教工具" : "Free for Clinic Patients"}</span>
+        <strong>https://beigou0427.github.io/dose_flow/</strong><br>
+        <span style="font-size: 10px;">${isZh ? "僅供個人紀錄整理，非醫療診斷依據" : "Personal tracking log only; not medical advice"}</span>
       </div>
     </div>
   </div>
@@ -351,7 +352,32 @@ class ClinicalExportService {
     }
   }
 
-  /// 一鍵將全量施打紀錄 CSV 實體寫入本機專案目錄 (支援 Excel/Numbers)
+  static const MethodChannel _storageChannel =
+      MethodChannel('com.doseflow.app/storage');
+
+  /// 呼叫原生 iOS/iPadOS 分享面板匯出報表檔案（支援存檔至「檔案」、AirDrop、列印與分享）
+  static Future<bool> shareReportNative({
+    required String content,
+    required String filename,
+  }) async {
+    if (kIsWeb) return false;
+    try {
+      if (Platform.environment.containsKey('FLUTTER_TEST')) return true;
+      if (!Platform.isIOS) return false;
+      return await _storageChannel.invokeMethod<bool>(
+            'shareReport',
+            <String, dynamic>{
+              'content': content,
+              'filename': filename,
+            },
+          ) ??
+          false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// 一鍵將全量施打紀錄 CSV 實體寫入本機安全目錄 (支援 Excel/Numbers)
   static Future<String?> exportCsvToDisk({
     required List<InjectionRecord> logs,
     required AppLanguage lang,
@@ -359,7 +385,13 @@ class ClinicalExportService {
     if (kIsWeb) return null;
     try {
       final String csv = generateCsv(logs: logs, lang: lang);
-      final File file = File('dose_flow_clinical_history.csv');
+      String dirPath = '.';
+      if (Platform.isIOS) {
+        final String? docs =
+            await _storageChannel.invokeMethod<String>('getDocumentsPath');
+        if (docs != null && docs.isNotEmpty) dirPath = docs;
+      }
+      final File file = File('$dirPath/dose_flow_clinical_history.csv');
       await file.writeAsString(csv, flush: true);
       return file.path;
     } catch (_) {
@@ -367,7 +399,7 @@ class ClinicalExportService {
     }
   }
 
-  /// 一鍵將醫師回診一頁式 HTML 報表實體寫入本機目錄 (可直接點擊列印)
+  /// 一鍵將醫師回診一頁式 HTML 報表實體寫入本機安全目錄 (可直接列印)
   static Future<String?> exportSummaryHtmlToDisk({
     required List<InjectionRecord> logs,
     required double startWeightKg,
@@ -384,7 +416,13 @@ class ClinicalExportService {
         lang: lang,
         unit: unit,
       );
-      final File file = File('dose_flow_physician_summary.html');
+      String dirPath = '.';
+      if (Platform.isIOS) {
+        final String? docs =
+            await _storageChannel.invokeMethod<String>('getDocumentsPath');
+        if (docs != null && docs.isNotEmpty) dirPath = docs;
+      }
+      final File file = File('$dirPath/dose_flow_physician_summary.html');
       await file.writeAsString(html, flush: true);
       return file.path;
     } catch (_) {
@@ -496,22 +534,22 @@ class _ClinicalExportDialogState extends State<ClinicalExportDialog> {
               ),
             ),
             const SizedBox(height: 12),
-            // 文字內容預覽區
+            // 文字內容預覽區（深色高對比可讀版）
             Expanded(
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: DoseFlowColors.cardElevated,
                   borderRadius: const BorderRadius.all(Radius.circular(12)),
-                  border: Border.all(color: const Color(0xFFCBD5E1)),
+                  border: Border.all(color: DoseFlowColors.cardBorder),
                 ),
                 child: SingleChildScrollView(
                   child: SelectableText(
                     contentText,
                     style: const TextStyle(
-                      fontSize: 11.0,
-                      fontFamily: 'Consolas',
-                      height: 1.45,
+                      fontSize: 11.5,
+                      color: DoseFlowColors.textPrimary,
+                      height: 1.5,
                     ),
                   ),
                 ),
@@ -521,43 +559,35 @@ class _ClinicalExportDialogState extends State<ClinicalExportDialog> {
         ),
       ),
       actions: <Widget>[
-        // 匯出實體檔案按鈕
+        // 原生分享 / 存檔 / 列印按鈕
         TextButton.icon(
           onPressed: () async {
-            String? path;
-            if (_selectedFormat == ClinicalExportFormat.csv) {
-              path = await ClinicalExportService.exportCsvToDisk(
-                logs: widget.logs,
-                lang: lang,
-              );
-            } else {
-              path = await ClinicalExportService.exportSummaryHtmlToDisk(
-                logs: widget.logs,
-                startWeightKg: widget.startWeightKg,
-                currentWeightKg: widget.currentWeightKg,
-                lang: lang,
-                unit: unit,
-              );
+            final String filename = switch (_selectedFormat) {
+              ClinicalExportFormat.csv => 'dose_flow_history.csv',
+              ClinicalExportFormat.physicianHtml => 'dose_flow_visit_summary.html',
+              ClinicalExportFormat.plainText => 'dose_flow_visit_summary.txt',
+            };
+            final bool shared = await ClinicalExportService.shareReportNative(
+              content: contentText,
+              filename: filename,
+            );
+            if (!shared) {
+              await Clipboard.setData(ClipboardData(text: contentText));
             }
-
-            if (context.mounted) {
+            if (context.mounted && !shared) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    path != null
-                        ? (isZh
-                            ? '📄 已在本機專案根目錄生成檔案：$path！'
-                            : '📄 Exported file to root: $path!')
-                        : (isZh
-                            ? '⚠️ 寫入失敗或處於 Web 環境'
-                            : '⚠️ Export restricted in web environment'),
+                    isZh
+                        ? '📋 已複製報表內容至剪貼簿！'
+                        : '📋 Copied report to clipboard!',
                   ),
                 ),
               );
             }
           },
-          icon: const Icon(Icons.file_download_outlined, size: 16),
-          label: Text(isZh ? '匯出實體檔案至本機' : 'Export File to Disk'),
+          icon: const Icon(Icons.ios_share_rounded, size: 16),
+          label: Text(isZh ? '分享 / 儲存檔案' : 'Share / Save'),
         ),
         // 複製純文字按鈕
         TextButton.icon(

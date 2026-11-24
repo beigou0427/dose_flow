@@ -19,60 +19,60 @@ void main() {
     });
   });
 
-  group('Loss Aversion & Bandwagon Copy Tests', () {
-    test('Loss aversion subtext contains social proof metrics in both traditional Chinese and English', () {
+  group('Loss Aversion & Pro Value Copy Tests', () {
+    test('Pro subtext contains clear value messaging without fabricated user counts', () {
       final String copyZh =
           BehavioralEconomicsEngine.getLossAversionSubtext(AppLanguage.zhTW);
       final String copyEn =
           BehavioralEconomicsEngine.getLossAversionSubtext(AppLanguage.enUS);
 
-      expect(copyZh, contains('8,420'));
-      expect(copyZh, contains('停止盲目猜測'));
+      expect(copyZh, contains('升級 Pro'));
+      expect(copyZh, isNot(contains('8,420')));
 
-      expect(copyEn, contains('8,420+'));
-      expect(copyEn, contains('Stop guessing'));
+      expect(copyEn, contains('Upgrade to Pro'));
+      expect(copyEn, isNot(contains('8,420')));
     });
   });
 
-  group('iPhone Duo Veblen Headline Dynamic Heuristics Tests', () {
-    test('Duo large screen triggers premium exclusivity headline in Traditional Chinese', () {
+  group('Wide-Screen Dual-Pane Headline Dynamic Heuristics Tests', () {
+    test('Large screen triggers wide-screen dual-pane headline in Traditional Chinese', () {
       final String headline =
           BehavioralEconomicsEngine.getDuoExclusivePaywallHeadline(
         AppLanguage.zhTW,
         true,
       );
-      expect(headline, contains('iPhone Duo 雙螢幕極致洞察'));
-      expect(headline, contains('90° 懸停模式'));
+      expect(headline, contains('大螢幕雙欄分析視圖'));
+      expect(headline, isNot(contains('iPhone Duo')));
     });
 
-    test('Standard screen falls back to PK curve and muscle loss headline in Traditional Chinese', () {
+    test('Standard screen falls back to PK curve and habit plan headline in Traditional Chinese', () {
       final String headline =
           BehavioralEconomicsEngine.getDuoExclusivePaywallHeadline(
         AppLanguage.zhTW,
         false,
       );
       expect(headline, contains('GLP-1 雙指數代謝模型'));
-      expect(headline, contains('抗掉肌肉計畫'));
+      expect(headline, contains('防掉肌習慣計畫'));
     });
 
-    test('Duo large screen triggers premium exclusivity headline in English', () {
+    test('Large screen triggers wide-screen dual-pane headline in English', () {
       final String headline =
           BehavioralEconomicsEngine.getDuoExclusivePaywallHeadline(
         AppLanguage.enUS,
         true,
       );
-      expect(headline, contains('iPhone Duo Dual-Pane Analytics'));
-      expect(headline, contains('Tabletop Mode'));
+      expect(headline, contains('Wide-Screen Dual-Pane Analytics'));
+      expect(headline, isNot(contains('iPhone Duo')));
     });
 
-    test('Standard screen falls back to PK curve and muscle loss headline in English', () {
+    test('Standard screen falls back to PK curve and habit plan headline in English', () {
       final String headline =
           BehavioralEconomicsEngine.getDuoExclusivePaywallHeadline(
         AppLanguage.enUS,
         false,
       );
       expect(headline, contains('Personal GLP-1 PK Curve'));
-      expect(headline, contains('Anti-Muscle Loss Plan'));
+      expect(headline, contains('Habit Plan'));
     });
   });
 

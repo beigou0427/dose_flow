@@ -17,18 +17,18 @@ class BehavioralEconomicsEngine {
   static String getDuoExclusivePaywallHeadline(AppLanguage lang, bool isDuoDevice) {
     if (isDuoDevice) {
       return lang.isZh
-          ? '解鎖 iPhone Duo 雙螢幕極致洞察與 90° 懸停模式'
-          : 'Unlock iPhone Duo Dual-Pane Analytics & Tabletop Mode';
+          ? '解鎖大螢幕雙欄分析視圖與即時週期曲線洞察'
+          : 'Unlock Wide-Screen Dual-Pane Analytics & Cycle Insights';
     }
     return lang.isZh
-        ? '解鎖專屬 GLP-1 雙指數代謝模型與抗掉肌肉計畫'
-        : 'Unlock Your Personal GLP-1 PK Curve & Anti-Muscle Loss Plan';
+        ? '解鎖專屬 GLP-1 雙指數代謝模型與防掉肌習慣計畫'
+        : 'Unlock Your Personal GLP-1 PK Curve & Habit Plan';
   }
 
   static String getLossAversionSubtext(AppLanguage lang) {
     return lang.isZh
-        ? '已有 8,420 位用戶解鎖 Pro，停止盲目猜測你的藥效。'
-        : 'Join 8,420+ Pro users. Stop guessing your medication levels.';
+        ? '升級 Pro 解鎖個人理論半衰期曲線、長期體重趨勢與回診摘要。'
+        : 'Upgrade to Pro for personal half-life curves, weight trends & visit summaries.';
   }
 
   // =========================================================================
@@ -37,8 +37,8 @@ class BehavioralEconomicsEngine {
 
   static String getKahnemanLossFramedHeadline(AppLanguage lang) {
     return lang.isZh
-        ? '若無精準濃度追蹤，每減 10 公斤中約 4 公斤為珍貴骨骼肌'
-        : 'Without tracking active levels, up to 40% of weight lost is lean muscle';
+        ? '同步追蹤每日蛋白質、飲水與施打週期，維持穩健健康習慣'
+        : 'Track daily protein, hydration & weekly shot cycles consistently';
   }
 
   static String getKahnemanEndowmentWarning(AppLanguage lang) {
@@ -79,8 +79,8 @@ class BehavioralEconomicsEngine {
 
   static String getThalerDefaultNudgeBadge(AppLanguage lang) {
     return lang.isZh
-        ? '🔥 88% 減重者預設首選 ‧ 自動鎖定 45% 醫療級年繳折扣'
-        : '🔥 Default Choice of 88% Users ‧ Auto-locks 45% Annual Savings';
+        ? '🔥 推薦年度方案 ‧ 享 3 天免費試用'
+        : '🔥 Best Value Annual Plan ‧ 3-Day Free Trial';
   }
 
   // =========================================================================
@@ -204,8 +204,8 @@ class BehavioralEconomicsEngine {
 
   static String getMilgromPeptideDiscriminationPitch(AppLanguage lang) {
     return lang.isZh
-        ? '🔬 胜肽玩家專屬：解鎖雙瓶混水微克級 U-100 針筒換算，告別超量下劑風險。'
-        : '🔬 Compounded Peptides Pro: Unlock micro-gram U-100 syringe math. Never miscalculate your reconstituted dose.';
+        ? '🔬 進階週期追蹤：解鎖完整 Bateman 理論濃度曲線、部位輪替歷史與醫師回診摘要匯出。'
+        : '🔬 Pro Cycle Insights: Unlock full theoretical half-life curves, site rotation history & doctor visit summaries.';
   }
 
   // =========================================================================
@@ -214,8 +214,8 @@ class BehavioralEconomicsEngine {
 
   static String getTiroleClinicReferralWatermark(AppLanguage lang) {
     return lang.isZh
-        ? '🤝 臨床醫師授權引薦 ‧ DoseFlow 本機 100% 離線隱私確保'
-        : '🤝 Recommended by Clinic Physicians ‧ DoseFlow 100% Offline Privacy';
+        ? '📋 結構化個人紀錄摘要 ‧ 方便回診時與醫師討論（100% 本機隱私）'
+        : '📋 Structured personal summary ready to share at your clinic visit (100% offline)';
   }
 
   static String getTiroleMaintenanceLockInPitch(AppLanguage lang) {

@@ -1,7 +1,7 @@
 name: dose_flow
-description: "DoseFlow / 瘦瘦針紀錄 Pro - GLP-1 Pharmacokinetics, Peptide Syringe Calculator & Micro-Habits Tracker (100% Local-First)."
+description: "DoseFlow / 瘦瘦針紀錄 Pro - GLP-1 Shot Diary, Site Rotation & Micro-Habits Tracker (100% Local-First)."
 publish_to: 'none'
-version: 1.1.0+5
+version: 1.1.0+6
 
 environment:
   sdk: '>=3.4.0 <4.0.0'

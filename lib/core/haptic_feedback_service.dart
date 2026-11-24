@@ -84,7 +84,7 @@ class HapticFeedbackService {
     } catch (_) {}
   }
 
-  /// 針筒超量/危險數值雙重高危急促警報（抽過 100 Units）
+  /// 警告提示觸覺回饋
   static Future<void> warningPattern() async {
     if (!isHapticsEnabled || _isShielded) return;
     try {
@@ -94,89 +94,6 @@ class HapticFeedbackService {
       await Future<void>.delayed(const Duration(milliseconds: 50));
       await HapticFeedback.vibrate();
     } catch (_) {}
-  }
-}
-
-/// 針筒專用動態阻尼機械觸感控制器（模擬精密活塞抽動阻尼）
-class SyringeHapticEngine {
-  SyringeHapticEngine();
-
-  double _lastTrackedUnits = 0.0;
-  DateTime _lastHapticTime = DateTime.fromMillisecondsSinceEpoch(0);
-
-  /// 節流防抖閥（防止手勢滑動過快造成 Taptic Engine 佇列阻塞）
-  static const int _throttleIntervalMs = 28;
-
-  /// 重設內部追蹤刻度
-  void reset(double currentUnits) {
-    _lastTrackedUnits = currentUnits;
-    _lastHapticTime = DateTime.now();
-  }
-
-  /// 當針筒抽取格數發生變化時呼叫，自動映射對應觸覺阻尼
-  void onUnitsChanged(double newUnits) {
-    if (!HapticFeedbackService.isHapticsEnabled) return;
-
-    final DateTime now = DateTime.now();
-    if (now.difference(_lastHapticTime).inMilliseconds < _throttleIntervalMs) {
-      return;
-    }
-
-    final int prevFloor = _lastTrackedUnits.floor();
-    final int newFloor = newUnits.floor();
-
-    // 1. 100 Units 超量物理極限警報（抽過滿管）
-    if (_lastTrackedUnits <= 100.0 && newUnits > 100.0) {
-      _lastHapticTime = now;
-      _lastTrackedUnits = newUnits;
-      HapticFeedbackService.warningPattern();
-      return;
-    }
-
-    // 2. 50 Units 黃金里程碑磁吸感（跨越 50 格關鍵標線）
-    if ((_lastTrackedUnits < 50.0 && newUnits >= 50.0) ||
-        (_lastTrackedUnits > 50.0 && newUnits <= 50.0)) {
-      _lastHapticTime = now;
-      _lastTrackedUnits = newUnits;
-      HapticFeedbackService.milestoneHit();
-      return;
-    }
-
-    // 3. 10 Units 整數主刻度頓挫
-    if (newFloor ~/ 10 != prevFloor ~/ 10) {
-      _lastHapticTime = now;
-      _lastTrackedUnits = newUnits;
-      HapticFeedbackService.lightImpact();
-      return;
-    }
-
-    // 4. 5 Units 次刻度微齒輪滴答
-    if (newFloor ~/ 5 != prevFloor ~/ 5) {
-      _lastHapticTime = now;
-      _lastTrackedUnits = newUnits;
-      HapticFeedbackService.selectionTick();
-      return;
-    }
-
-    _lastTrackedUnits = newUnits;
-  }
-
-  /// 選擇標準劑量標籤時的機械觸感 (2.5mg, 5.0mg...)
-  void onDoseSelected(double doseMg) {
-    if (!HapticFeedbackService.isHapticsEnabled) return;
-    HapticFeedbackService.lightImpact();
-  }
-
-  /// 成功打卡一筆施打紀錄時的深度確認感
-  void onShotLogged() {
-    if (!HapticFeedbackService.isHapticsEnabled) return;
-    HapticFeedbackService.heavyImpact();
-  }
-
-  /// 完成蛋白質/飲水/順暢排便打卡時的成就雙脈衝
-  void onHabitCompleted() {
-    if (!HapticFeedbackService.isHapticsEnabled) return;
-    HapticFeedbackService.successPattern();
   }
 }
 

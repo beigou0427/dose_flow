@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../core/app_localization.dart';
+import '../../core/app_theme.dart';
 import '../../core/pharmacokinetics_engine.dart';
 import '../../core/behavioral_economics_engine.dart';
 import '../../core/haptic_feedback_service.dart';
@@ -155,13 +156,13 @@ class _OnboardingViewState extends State<OnboardingView> {
     final bool isZh = lang.isZh;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: DoseFlowColors.bgDeep,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: _currentStep > 0
             ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+                icon: const Icon(Icons.arrow_back_rounded, color: DoseFlowColors.textPrimary),
                 onPressed: _previousStep,
               )
             : null,
@@ -175,8 +176,8 @@ class _OnboardingViewState extends State<OnboardingView> {
                 margin: const EdgeInsets.symmetric(horizontal: 2.5),
                 decoration: BoxDecoration(
                   color: isActive
-                      ? const Color(0xFF0EA5E9)
-                      : const Color(0xFFE2E8F0),
+                      ? DoseFlowColors.mint
+                      : DoseFlowColors.cardBorder,
                   borderRadius: const BorderRadius.all(Radius.circular(999)),
                 ),
               ),
@@ -188,7 +189,7 @@ class _OnboardingViewState extends State<OnboardingView> {
             onPressed: widget.onSkip,
             child: Text(
               isZh ? '略過' : 'Skip',
-              style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+              style: const TextStyle(color: DoseFlowColors.textSecondary, fontWeight: FontWeight.w600),
             ),
           ),
           const SizedBox(width: 8),
@@ -240,16 +241,16 @@ class _OnboardingViewState extends State<OnboardingView> {
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF0F172A),
+              color: DoseFlowColors.textPrimary,
               height: 1.3,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             isZh
-                ? '系統將依據該藥物官方 FDA 仿單參數，為您校準血中濃度與半衰期曲線：'
-                : 'DoseFlow calibrates your curve using official FDA pharmacokinetic half-life parameters:',
-            style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                ? '系統將依據該藥物公開 FDA 仿單半衰期參數，為您視覺化個人理論曲線參考：'
+                : 'DoseFlow visualizes theoretical reference curves using published FDA half-life parameters:',
+            style: const TextStyle(fontSize: 13, color: DoseFlowColors.textSecondary),
           ),
           const SizedBox(height: 24),
           Expanded(
@@ -269,13 +270,13 @@ class _OnboardingViewState extends State<OnboardingView> {
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? const Color(0xFF0EA5E9).withValues(alpha: 0.08)
-                            : Colors.white,
+                            ? DoseFlowColors.mint.withValues(alpha: 0.14)
+                            : DoseFlowColors.cardSurface,
                         borderRadius: const BorderRadius.all(Radius.circular(16)),
                         border: Border.all(
                           color: isSelected
-                              ? const Color(0xFF0EA5E9)
-                              : const Color(0xFFE2E8F0),
+                              ? DoseFlowColors.mint
+                              : DoseFlowColors.cardBorder,
                           width: isSelected ? 2.0 : 1.2,
                         ),
                       ),
@@ -286,8 +287,8 @@ class _OnboardingViewState extends State<OnboardingView> {
                                 ? Icons.radio_button_checked_rounded
                                 : Icons.radio_button_off_rounded,
                             color: isSelected
-                                ? const Color(0xFF0EA5E9)
-                                : const Color(0xFF94A3B8),
+                                ? DoseFlowColors.mint
+                                : DoseFlowColors.textMuted,
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -301,7 +302,7 @@ class _OnboardingViewState extends State<OnboardingView> {
                                     fontWeight: isSelected
                                         ? FontWeight.w800
                                         : FontWeight.w600,
-                                    color: const Color(0xFF0F172A),
+                                    color: DoseFlowColors.textPrimary,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -311,7 +312,7 @@ class _OnboardingViewState extends State<OnboardingView> {
                                       : 'Half-life ~${med.halfLifeHours.toInt()}h | Peak absorption ~${med.peakHoursTmax.toInt()}h',
                                   style: const TextStyle(
                                     fontSize: 11.5,
-                                    color: Color(0xFF64748B),
+                                    color: DoseFlowColors.textSecondary,
                                   ),
                                 ),
                               ],
@@ -379,29 +380,29 @@ class _OnboardingViewState extends State<OnboardingView> {
           ),
           const SizedBox(height: 12),
           Text(
-            isZh ? '您目前的注射劑量與上次打針日？' : 'What is your current dose & last shot?',
+            isZh ? '您目前的處方紀錄劑量與上次打針日？' : 'What is your logged dose & last shot?',
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF0F172A),
+              color: DoseFlowColors.textPrimary,
               height: 1.3,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             isZh
-                ? '系統正為您即時運算當前血液中殘留的活性藥物濃度：'
-                : 'DoseFlow estimates active plasma levels in real time:',
-            style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                ? '依您輸入的紀錄繪製理論半衰期視覺參考曲線（不代表實際血液檢測值）：'
+                : 'Visualizes a theoretical half-life reference curve from your log (not a blood measurement):',
+            style: const TextStyle(fontSize: 13, color: DoseFlowColors.textSecondary),
           ),
           const SizedBox(height: 20),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: doseColor.withValues(alpha: 0.08),
+              color: doseColor.withValues(alpha: 0.12),
               borderRadius: const BorderRadius.all(Radius.circular(16)),
-              border: Border.all(color: doseColor.withValues(alpha: 0.35)),
+              border: Border.all(color: doseColor.withValues(alpha: 0.45)),
             ),
             child: Row(
               children: <Widget>[
@@ -412,7 +413,7 @@ class _OnboardingViewState extends State<OnboardingView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        isZh ? '雙指數 Bateman 藥動學模型' : 'Real-time PK Engine Active',
+                        isZh ? '雙指數 Bateman 理論模型參考' : 'Theoretical Bateman Model Reference',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -422,12 +423,12 @@ class _OnboardingViewState extends State<OnboardingView> {
                       const SizedBox(height: 2),
                       Text(
                         isZh
-                            ? '預估當前體內活性殘留：~${activeResidualMg.toStringAsFixed(2)} mg'
-                            : 'Estimated active in body: ~${activeResidualMg.toStringAsFixed(2)} mg',
+                            ? '理論推估參考值：~${activeResidualMg.toStringAsFixed(2)} mg'
+                            : 'Theoretical reference estimate: ~${activeResidualMg.toStringAsFixed(2)} mg',
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
+                          color: DoseFlowColors.textPrimary,
                         ),
                       ),
                     ],
@@ -438,8 +439,8 @@ class _OnboardingViewState extends State<OnboardingView> {
           ),
           const SizedBox(height: 20),
           Text(
-            isZh ? '目前單次注射劑量 (mg)' : 'Current Dose to Inject (mg)',
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            isZh ? '目前處方單次紀錄劑量 (mg)' : 'Logged Prescribed Dose (mg)',
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: DoseFlowColors.textPrimary),
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -549,26 +550,26 @@ class _OnboardingViewState extends State<OnboardingView> {
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF0F172A),
+              color: DoseFlowColors.textPrimary,
               height: 1.3,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             isZh
-                ? '系統依據臨床標準安全減速 (0.75 kg/週)，為您即時預估達標時間點：'
-                : 'Projected timeline based on safe clinical velocity (0.75 kg/week):',
-            style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                ? '依據一般溫和節奏 (約 0.75 kg/週) 估算個人追蹤參考時程：'
+                : 'General pacing reference (~0.75 kg/week) for your personal milestone view:',
+            style: const TextStyle(fontSize: 13, color: DoseFlowColors.textSecondary),
           ),
           const SizedBox(height: 16),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF10B981).withValues(alpha: 0.08),
+              color: DoseFlowColors.mint.withValues(alpha: 0.12),
               borderRadius: const BorderRadius.all(Radius.circular(16)),
               border: Border.all(
-                color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                color: DoseFlowColors.mint.withValues(alpha: 0.4),
               ),
             ),
             child: Column(
@@ -577,17 +578,17 @@ class _OnboardingViewState extends State<OnboardingView> {
                 Row(
                   children: <Widget>[
                     const Icon(Icons.track_changes_rounded,
-                        color: Color(0xFF10B981), size: 24),
+                        color: DoseFlowColors.mint, size: 24),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         isZh
-                            ? '預計總減重：-${displayDiff.toStringAsFixed(1)} ${unit.symbol} (${lossPercentage.toStringAsFixed(1)}%)'
-                            : 'Target Loss: -${displayDiff.toStringAsFixed(1)} ${unit.symbol} (${lossPercentage.toStringAsFixed(1)}%)',
+                            ? '個人目標差距：-${displayDiff.toStringAsFixed(1)} ${unit.symbol} (${lossPercentage.toStringAsFixed(1)}%)'
+                            : 'Target Goal: -${displayDiff.toStringAsFixed(1)} ${unit.symbol} (${lossPercentage.toStringAsFixed(1)}%)',
                         style: const TextStyle(
                           fontSize: 14.5,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF065F46),
+                          color: DoseFlowColors.mint,
                         ),
                       ),
                     ),
@@ -596,11 +597,11 @@ class _OnboardingViewState extends State<OnboardingView> {
                 const SizedBox(height: 8),
                 Text(
                   isZh
-                      ? '⏱️ 預估達成時間：約 $estimatedWeeks 週 (約 ${(estimatedWeeks / 4.3).toStringAsFixed(1)} 個月)\n'
-                          '💡 減去 ${lossPercentage.toStringAsFixed(0)}% 體重將大幅降低心血管與代謝負擔！'
-                      : '⏱️ Estimated Timeline: ~$estimatedWeeks weeks (~${(estimatedWeeks / 4.3).toStringAsFixed(1)} months)\n'
-                          '💡 Dropping ${lossPercentage.toStringAsFixed(0)}% body weight drastically improves metabolic health!',
-                  style: const TextStyle(fontSize: 12.0, color: Color(0xFF047857), height: 1.4),
+                      ? '⏱️ 參考追蹤時程：約 $estimatedWeeks 週 (約 ${(estimatedWeeks / 4.3).toStringAsFixed(1)} 個月)\n'
+                          '💡 循序漸進記錄每週體重與日常習慣，穩定朝個人健康目標邁進。'
+                      : '⏱️ Reference Timeline: ~$estimatedWeeks weeks (~${(estimatedWeeks / 4.3).toStringAsFixed(1)} months)\n'
+                          '💡 Consistent weekly tracking helps you stay on course toward your wellness goal.',
+                  style: const TextStyle(fontSize: 12.0, color: DoseFlowColors.textSecondary, height: 1.4),
                 ),
               ],
             ),
@@ -718,16 +719,16 @@ class _OnboardingViewState extends State<OnboardingView> {
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF0F172A),
+              color: DoseFlowColors.textPrimary,
               height: 1.3,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             isZh
-                ? '可複選。我們將依據您的勾選項目，量身定製微習慣打卡與安全提醒規則：'
-                : 'Select all that apply. We tailor your micro-habits and rotation rules accordingly:',
-            style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                ? '可複選。我們將依據您的勾選項目，量身定製微習慣打卡與輪替提醒：'
+                : 'Select all that apply. We tailor your micro-habits and rotation reminders accordingly:',
+            style: const TextStyle(fontSize: 13, color: DoseFlowColors.textSecondary),
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -753,13 +754,13 @@ class _OnboardingViewState extends State<OnboardingView> {
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? const Color(0xFF0EA5E9).withValues(alpha: 0.08)
-                            : Colors.white,
+                            ? DoseFlowColors.mint.withValues(alpha: 0.14)
+                            : DoseFlowColors.cardSurface,
                         borderRadius: const BorderRadius.all(Radius.circular(16)),
                         border: Border.all(
                           color: isSelected
-                              ? const Color(0xFF0EA5E9)
-                              : const Color(0xFFE2E8F0),
+                              ? DoseFlowColors.mint
+                              : DoseFlowColors.cardBorder,
                           width: isSelected ? 1.8 : 1.1,
                         ),
                       ),
@@ -770,8 +771,8 @@ class _OnboardingViewState extends State<OnboardingView> {
                                 ? Icons.check_box_rounded
                                 : Icons.check_box_outline_blank_rounded,
                             color: isSelected
-                                ? const Color(0xFF0EA5E9)
-                                : const Color(0xFF94A3B8),
+                                ? DoseFlowColors.mint
+                                : DoseFlowColors.textMuted,
                             size: 22,
                           ),
                           const SizedBox(width: 12),
@@ -779,15 +780,15 @@ class _OnboardingViewState extends State<OnboardingView> {
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? const Color(0xFF0EA5E9).withValues(alpha: 0.15)
-                                  : const Color(0xFFF1F5F9),
+                                  ? DoseFlowColors.mint.withValues(alpha: 0.18)
+                                  : DoseFlowColors.cardElevated,
                               borderRadius: const BorderRadius.all(Radius.circular(10)),
                             ),
                             child: Icon(
                               p.icon,
                               color: isSelected
-                                  ? const Color(0xFF0EA5E9)
-                                  : const Color(0xFF64748B),
+                                  ? DoseFlowColors.mint
+                                  : DoseFlowColors.textSecondary,
                               size: 20,
                             ),
                           ),
@@ -803,7 +804,7 @@ class _OnboardingViewState extends State<OnboardingView> {
                                     fontWeight: isSelected
                                         ? FontWeight.w800
                                         : FontWeight.w600,
-                                    color: const Color(0xFF0F172A),
+                                    color: DoseFlowColors.textPrimary,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -811,7 +812,7 @@ class _OnboardingViewState extends State<OnboardingView> {
                                   p.desc(lang),
                                   style: const TextStyle(
                                     fontSize: 11.5,
-                                    color: Color(0xFF64748B),
+                                    color: DoseFlowColors.textSecondary,
                                   ),
                                 ),
                               ],
@@ -854,8 +855,6 @@ class _OnboardingViewState extends State<OnboardingView> {
         unit == WeightUnit.lbs ? (weightDiff * 2.20462) : weightDiff;
     final int estimatedWeeks = math.max(4, (weightDiff / 0.75).ceil());
     final Color doseColor = PharmacokineticsEngine.colorForDose(_currentDoseMg);
-    final double anchoredMonthlyUsd =
-        BehavioralEconomicsEngine.getAnchoredMonthlyPrice(39.99);
 
     final DateTime now = DateTime.now();
     final List<InjectionRecord> previewLogs = <InjectionRecord>[
@@ -902,22 +901,22 @@ class _OnboardingViewState extends State<OnboardingView> {
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF0F172A),
+              color: DoseFlowColors.textPrimary,
               height: 1.3,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             BehavioralEconomicsEngine.getLossAversionSubtext(lang),
-            style: const TextStyle(fontSize: 12.0, color: Color(0xFF64748B)),
+            style: const TextStyle(fontSize: 12.0, color: DoseFlowColors.textSecondary),
           ),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: DoseFlowColors.cardSurface,
               borderRadius: const BorderRadius.all(Radius.circular(18)),
-              border: Border.all(color: doseColor.withValues(alpha: 0.3)),
+              border: Border.all(color: doseColor.withValues(alpha: 0.35)),
             ),
             child: Stack(
               alignment: Alignment.center,
@@ -939,9 +938,9 @@ class _OnboardingViewState extends State<OnboardingView> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.94),
+                    color: DoseFlowColors.cardElevated.withValues(alpha: 0.94),
                     borderRadius: const BorderRadius.all(Radius.circular(999)),
-                    border: Border.all(color: doseColor.withValues(alpha: 0.4)),
+                    border: Border.all(color: doseColor.withValues(alpha: 0.45)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -950,8 +949,8 @@ class _OnboardingViewState extends State<OnboardingView> {
                       const SizedBox(width: 6),
                       Text(
                         isZh
-                            ? '專屬血中活性濃度代謝模型已就緒'
-                            : 'Personal Bateman Curve Calibrated',
+                            ? '專屬理論半衰期曲線已就緒'
+                            : 'Personal Reference Curve Ready',
                         style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w800,
@@ -971,21 +970,21 @@ class _OnboardingViewState extends State<OnboardingView> {
                 _buildSummaryBullet(
                   icon: Icons.medication_rounded,
                   color: doseColor,
-                  title: isZh ? '當前療程藥物' : 'Active Medication',
+                  title: isZh ? '當前紀錄藥物' : 'Logged Medication',
                   desc: '${_selectedMedication.displayName(lang)} (${_currentDoseMg.toStringAsFixed(1)} mg)',
                 ),
                 _buildSummaryBullet(
                   icon: Icons.track_changes_rounded,
-                  color: const Color(0xFF10B981),
-                  title: isZh ? '臨床安全減重時程' : 'Goal Timeline',
+                  color: DoseFlowColors.mint,
+                  title: isZh ? '個人目標參考時程' : 'Goal Reference Timeline',
                   desc: isZh
-                      ? '目標減重 -${displayDiff.toStringAsFixed(1)} ${unit.symbol}，預計約 $estimatedWeeks 週達成'
-                      : 'Target: -${displayDiff.toStringAsFixed(1)} ${unit.symbol} in ~$estimatedWeeks weeks',
+                      ? '目標差距 -${displayDiff.toStringAsFixed(1)} ${unit.symbol}，參考約 $estimatedWeeks 週'
+                      : 'Target: -${displayDiff.toStringAsFixed(1)} ${unit.symbol} (~$estimatedWeeks weeks)',
                 ),
                 _buildSummaryBullet(
                   icon: Icons.shield_rounded,
-                  color: const Color(0xFF0EA5E9),
-                  title: isZh ? '個人化抗掉肌與輪替防護' : 'Tailored Anti-Muscle Loss Plan',
+                  color: DoseFlowColors.cyan,
+                  title: isZh ? '個人化習慣與部位輪替' : 'Habit Rings & Site Rotation',
                   desc: isZh
                       ? '每日蛋白質與補水目標 ✕ 8 大部位輪替避開肚臍'
                       : 'Daily protein & hydration rings + 8-quadrant smart rotation',
@@ -998,13 +997,13 @@ class _OnboardingViewState extends State<OnboardingView> {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF0EA5E9).withValues(alpha: 0.08),
+              color: DoseFlowColors.mint.withValues(alpha: 0.12),
               borderRadius: const BorderRadius.all(Radius.circular(14)),
-              border: Border.all(color: const Color(0xFF0EA5E9), width: 1.5),
+              border: Border.all(color: DoseFlowColors.mint.withValues(alpha: 0.6), width: 1.4),
             ),
             child: Row(
               children: <Widget>[
-                const Icon(Icons.star_rounded, color: Color(0xFF0EA5E9), size: 22),
+                const Icon(Icons.star_rounded, color: DoseFlowColors.mint, size: 22),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -1012,21 +1011,21 @@ class _OnboardingViewState extends State<OnboardingView> {
                     children: <Widget>[
                       Text(
                         isZh
-                            ? 'Pro 完整追蹤方案（提供年繳 3 天免費試用選項）'
-                            : 'Pro Plans Available (3-Day Free Trial on Annual)',
+                            ? '可於主畫面隨時升級 Pro（年繳方案含 3 天免費試用）'
+                            : 'Optional Pro Upgrade Available (3-Day Free Trial on Annual)',
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
+                          color: DoseFlowColors.textPrimary,
                         ),
                       ),
                       Text(
                         isZh
-                            ? r'平均每月僅 NT$ 82（折合約 $' + anchoredMonthlyUsd.toStringAsFixed(2) + r'/月），隨時可在 App Store 取消'
-                            : r'Just $' + anchoredMonthlyUsd.toStringAsFixed(2) + r'/mo ($39.99/yr), cancel anytime in App Store',
+                            ? '提供月繳、年繳與終身方案，實際價格依 App Store 結帳顯示為準，可隨時取消'
+                            : 'Monthly, Annual & Lifetime options available. Exact pricing shown in App Store checkout; cancel anytime.',
                         style: const TextStyle(
                           fontSize: 11,
-                          color: Color(0xFF0284C7),
+                          color: DoseFlowColors.textSecondary,
                         ),
                       ),
                     ],
@@ -1040,17 +1039,17 @@ class _OnboardingViewState extends State<OnboardingView> {
             onPressed: _nextStep,
             icon: Icons.bolt_rounded,
             label: isZh
-                ? '完成設定，查看我的專屬曲線'
-                : 'Complete Setup & View My Plan',
-            color: const Color(0xFF0EA5E9),
+                ? '完成設定，進入今日儀表板'
+                : 'Complete Setup & Enter Dashboard',
+            color: DoseFlowColors.mint,
           ),
           const SizedBox(height: 6),
           Center(
             child: TextButton(
               onPressed: _nextStep,
               child: Text(
-                isZh ? '先以免費版體驗日誌 (功能受限)' : 'Continue with Free Version (Limited)',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                isZh ? '先以免費版體驗日誌' : 'Continue with Free Version',
+                style: const TextStyle(fontSize: 12, color: DoseFlowColors.textSecondary),
               ),
             ),
           ),
@@ -1073,7 +1072,7 @@ class _OnboardingViewState extends State<OnboardingView> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: color.withValues(alpha: 0.14),
               borderRadius: const BorderRadius.all(Radius.circular(8)),
             ),
             child: Icon(icon, color: color, size: 16),
@@ -1088,12 +1087,12 @@ class _OnboardingViewState extends State<OnboardingView> {
                   style: const TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
+                    color: DoseFlowColors.textPrimary,
                   ),
                 ),
                 Text(
                   desc,
-                  style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                  style: const TextStyle(fontSize: 11.5, color: DoseFlowColors.textSecondary),
                 ),
               ],
             ),

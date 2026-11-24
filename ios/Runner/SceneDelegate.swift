@@ -19,26 +19,107 @@ class SceneDelegate: FlutterSceneDelegate {
     }
     isBridgesRegistered = true
     let messenger = flutterVC.binaryMessenger
-    DoseFlowStoreKitBridge.shared.register(with: messenger)
+    let windowScene = scene as? UIWindowScene
+    DoseFlowStoreKitBridge.shared.register(with: messenger, windowScene: windowScene)
     DoseFlowBiometricsBridge.shared.register(with: messenger)
     DoseFlowNotificationsBridge.shared.register(with: messenger)
     DoseFlowICloudBridge.shared.register(with: messenger)
+    DoseFlowStorageBridge.shared.register(with: messenger, viewController: flutterVC)
   }
 }
 
 final class DoseFlowStoreKitBridge {
   static let shared = DoseFlowStoreKitBridge()
   private var updatesTask: Task<Void, Never>?
+  private weak var activeWindowScene: UIWindowScene?
 
   private init() {}
 
-  func register(with messenger: FlutterBinaryMessenger) {
+  func fetchProductPrices(productIds: [String]) async throws -> [String: String] {
+    let products = try await Product.products(for: productIds)
+    var priceMap: [String: String] = [:]
+    for product in products {
+      priceMap[product.id] = product.displayPrice
+    }
+    return priceMap
+  }
+
+  @MainActor
+  func purchaseProduct(productId: String) async throws -> String {
+    let products = try await Product.products(for: [productId])
+    guard let product = products.first else {
+      throw NSError(
+        domain: "DoseFlowStoreKit",
+        code: 404,
+        userInfo: [NSLocalizedDescriptionKey: "Product unavailable: \(productId)", "code": "PRODUCT_NOT_FOUND"]
+      )
+    }
+    let purchaseResult: Product.PurchaseResult
+    if #available(iOS 18.2, *),
+       let scene = activeWindowScene ?? (UIApplication.shared.connectedScenes.first as? UIWindowScene) {
+      purchaseResult = try await product.purchase(confirmIn: scene)
+    } else {
+      purchaseResult = try await product.purchase()
+    }
+    switch purchaseResult {
+    case .success(let verification):
+      switch verification {
+      case .verified(let transaction):
+        await transaction.finish()
+        return verification.jwsRepresentation
+      case .unverified(_, let error):
+        throw NSError(
+          domain: "DoseFlowStoreKit",
+          code: 401,
+          userInfo: [NSLocalizedDescriptionKey: error.localizedDescription, "code": "UNVERIFIED"]
+        )
+      }
+    case .userCancelled:
+      throw NSError(
+        domain: "DoseFlowStoreKit",
+        code: 499,
+        userInfo: [NSLocalizedDescriptionKey: "Purchase cancelled by user", "code": "USER_CANCELLED"]
+      )
+    case .pending:
+      throw NSError(
+        domain: "DoseFlowStoreKit",
+        code: 202,
+        userInfo: [NSLocalizedDescriptionKey: "Purchase pending approval", "code": "PENDING"]
+      )
+    @unknown default:
+      throw NSError(
+        domain: "DoseFlowStoreKit",
+        code: 500,
+        userInfo: [NSLocalizedDescriptionKey: "Unknown purchase state", "code": "UNKNOWN"]
+      )
+    }
+  }
+
+  func fetchActiveEntitlementIds(syncWithAppStore: Bool) async -> [String] {
+    if syncWithAppStore {
+      try? await AppStore.sync()
+    }
+    var activeIds: [String] = []
+    let now = Date()
+    for await verification in Transaction.currentEntitlements {
+      if case .verified(let tx) = verification,
+         tx.revocationDate == nil,
+         (tx.expirationDate == nil || tx.expirationDate! > now) {
+        activeIds.append(tx.productID)
+      }
+    }
+    return activeIds
+  }
+
+  func register(with messenger: FlutterBinaryMessenger, windowScene: UIWindowScene? = nil) {
+    activeWindowScene = windowScene
     startTransactionListener()
     let channel = FlutterMethodChannel(
       name: "com.doseflow.app/storekit",
       binaryMessenger: messenger
     )
-    channel.setMethodCallHandler { call, result in
+    channel.setMethodCallHandler { [weak self] call, result in
+      guard let self = self else { return }
       switch call.method {
       case "fetchProducts":
         guard let args = call.arguments as? [String: Any],
@@ -48,11 +129,7 @@ final class DoseFlowStoreKitBridge {
         }
         Task { @MainActor in
           do {
-            let products = try await Product.products(for: productIds)
-            var priceMap: [String: String] = [:]
-            for product in products {
-              priceMap[product.id] = product.displayPrice
-            }
+            let priceMap = try await self.fetchProductPrices(productIds: productIds)
             result(priceMap)
           } catch {
             result(FlutterError(code: "FETCH_ERROR", message: error.localizedDescription, details: nil))
@@ -66,41 +143,21 @@ final class DoseFlowStoreKitBridge {
         }
         Task { @MainActor in
           do {
-            let products = try await Product.products(for: [productId])
-            guard let product = products.first else {
-              result(FlutterError(code: "PRODUCT_NOT_FOUND", message: "Product unavailable: \(productId)", details: nil))
-              return
-            }
-            let purchaseResult = try await product.purchase()
-            switch purchaseResult {
-            case .success(let verification):
-              switch verification {
-              case .verified(let transaction):
-                await transaction.finish()
-                result(verification.jwsRepresentation)
-              case .unverified(_, let error):
-                result(FlutterError(code: "UNVERIFIED", message: error.localizedDescription, details: nil))
-              }
-            case .userCancelled:
-              result(FlutterError(code: "USER_CANCELLED", message: "Purchase cancelled by user", details: nil))
-            case .pending:
-              result(FlutterError(code: "PENDING", message: "Purchase pending approval", details: nil))
-            @unknown default:
-              result(FlutterError(code: "UNKNOWN", message: "Unknown purchase state", details: nil))
-            }
-          } catch {
-            result(FlutterError(code: "PURCHASE_ERROR", message: error.localizedDescription, details: nil))
+            let jws = try await self.purchaseProduct(productId: productId)
+            result(jws)
+          } catch let nsError as NSError {
+            let errCode = (nsError.userInfo["code"] as? String) ?? "PURCHASE_ERROR"
+            result(FlutterError(code: errCode, message: nsError.localizedDescription, details: nil))
           }
+        }
+      case "checkEntitlements":
+        Task { @MainActor in
+          let activeIds = await self.fetchActiveEntitlementIds(syncWithAppStore: false)
+          result(activeIds)
         }
       case "restorePurchases":
         Task { @MainActor in
-          try? await AppStore.sync()
-          var activeIds: [String] = []
-          for await verification in Transaction.currentEntitlements {
-            if case .verified(let tx) = verification, tx.revocationDate == nil {
-              activeIds.append(tx.productID)
-            }
-          }
+          let activeIds = await self.fetchActiveEntitlementIds(syncWithAppStore: true)
           result(activeIds)
         }
       default:
@@ -266,6 +323,70 @@ final class DoseFlowICloudBridge {
       case "pullBackup":
         store.synchronize()
         result(store.string(forKey: self.backupKey))
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+}
+
+/// DoseFlow 原生沙盒文件目錄與 iOS/iPadOS 原生分享表單橋接
+final class DoseFlowStorageBridge {
+  static let shared = DoseFlowStorageBridge()
+  private weak var hostViewController: UIViewController?
+  private init() {}
+
+  func register(with messenger: FlutterBinaryMessenger, viewController: UIViewController) {
+    hostViewController = viewController
+    let channel = FlutterMethodChannel(
+      name: "com.doseflow.app/storage",
+      binaryMessenger: messenger
+    )
+    channel.setMethodCallHandler { [weak self] call, result in
+      switch call.method {
+      case "getDocumentsPath":
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+        result(docs?.path)
+      case "shareReport":
+        guard let args = call.arguments as? [String: Any],
+              let content = args["content"] as? String else {
+          result(false)
+          return
+        }
+        let filename = args["filename"] as? String
+        DispatchQueue.main.async {
+          guard let vc = self?.hostViewController else {
+            result(false)
+            return
+          }
+          var activityItems: [Any] = [content]
+          if let filename = filename, !filename.isEmpty {
+            let tempUrl = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+            if let data = content.data(using: .utf8) {
+              try? data.write(to: tempUrl, options: .atomic)
+              activityItems = [tempUrl]
+            }
+          }
+          let activityVC = UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+          // Prevent iPad popover crash (Guideline 2.1)
+          if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = vc.view
+            popover.sourceRect = CGRect(
+              x: vc.view.bounds.midX,
+              y: vc.view.bounds.midY,
+              width: 1,
+              height: 1
+            )
+            popover.permittedArrowDirections = []
+          }
+          var presenter: UIViewController = vc
+          while let presented = presenter.presentedViewController {
+            presenter = presented
+          }
+          presenter.present(activityVC, animated: true) {
+            result(true)
+          }
+        }
       default:
         result(FlutterMethodNotImplemented)
       }

@@ -187,7 +187,12 @@ class PurchaseService extends ChangeNotifier {
     } catch (_) {}
   }
 
+  /// Allows unit tests to exercise the real MethodChannel bridge instead of the test sandbox stub.
+  @visibleForTesting
+  static bool forceChannelForTesting = false;
+
   static bool get _isTestSandbox {
+    if (forceChannelForTesting) return false;
     if (kIsWeb) return true;
     try {
       return Platform.environment.containsKey('FLUTTER_TEST');
@@ -272,6 +277,43 @@ class PurchaseService extends ChangeNotifier {
     return true;
   }
 
+  Future<void> syncCurrentEntitlements() async {
+    if (_isTestSandbox) return;
+    try {
+      final List<dynamic>? activeIds =
+          await _storeKitChannel.invokeMethod<List<dynamic>>(
+        'checkEntitlements',
+      );
+      final List<String> ids = (activeIds ?? <dynamic>[])
+          .map((dynamic e) => e.toString())
+          .toList();
+
+      SubscriptionTier? activeTier;
+      if (ids.contains(SubscriptionTier.lifetime.productId)) {
+        activeTier = SubscriptionTier.lifetime;
+      } else if (ids.contains(SubscriptionTier.annual.productId)) {
+        activeTier = SubscriptionTier.annual;
+      } else if (ids.contains(SubscriptionTier.monthly.productId)) {
+        activeTier = SubscriptionTier.monthly;
+      }
+
+      if (activeTier != null) {
+        final DateTime now = DateTime.now();
+        _currentEntitlement = ProEntitlementInfo(
+          isProUnlocked: true,
+          tier: activeTier,
+          originalPurchaseDate: now,
+          expirationDate: activeTier == SubscriptionTier.lifetime
+              ? null
+              : now.add(const Duration(days: 365)),
+        );
+      } else {
+        _currentEntitlement = ProEntitlementInfo.free();
+      }
+      notifyListeners();
+    } catch (_) {}
+  }
+
   Future<bool> restorePurchases() async {
     if (_status == PurchaseStatus.purchasing ||
         _status == PurchaseStatus.verifying) {
@@ -337,7 +379,10 @@ class PurchaseService extends ChangeNotifier {
     return false;
   }
 
+  /// Strictly restricted to unit tests and debug builds; never unlocks Pro in release builds.
+  @visibleForTesting
   void toggleProForTesting() {
+    if (!kDebugMode && !_isTestSandbox) return;
     if (_currentEntitlement.isProUnlocked) {
       _currentEntitlement = ProEntitlementInfo.free();
     } else {
@@ -352,6 +397,16 @@ class PurchaseService extends ChangeNotifier {
         ),
       );
     }
+    notifyListeners();
+  }
+
+  /// Strictly for unit tests to reset singleton entitlement state between tests.
+  @visibleForTesting
+  void resetToFreeForTesting() {
+    if (!kDebugMode && !_isTestSandbox) return;
+    _currentEntitlement = ProEntitlementInfo.free();
+    _status = PurchaseStatus.idle;
+    _lastErrorMessage = null;
     notifyListeners();
   }
 }
@@ -386,15 +441,7 @@ class ReceiptValidator {
 class ProAccessGate {
   const ProAccessGate._();
 
-  static const int freeSyringeCalcQuota = 3;
-
   static bool canViewPkCurve({required bool isProUnlocked}) => isProUnlocked;
-
-  static bool canUseSyringeCalculator({
-    required bool isProUnlocked,
-    required int usageCount,
-  }) =>
-      isProUnlocked || (usageCount < freeSyringeCalcQuota);
 
   static bool canViewDoseColoredWeight({required bool isProUnlocked}) =>
       isProUnlocked;

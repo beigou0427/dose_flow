@@ -295,7 +295,7 @@ class _LandingPageState extends State<LandingPage> {
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'Download DoseFlow to see 7-day forecasts,\nsyringe math & smart injection rotation.',
+                          'Download DoseFlow to see 7-day forecasts,\nhabit rings & smart injection rotation.',
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
                         ),

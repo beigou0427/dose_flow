@@ -14,7 +14,7 @@ import 'core/behavioral_economics_engine.dart';
 import 'core/legal_compliance_hub.dart';
 import 'core/reminder_service.dart';
 import 'core/privacy_security_service.dart';
-import 'features/calculator/syringe_calculator_view.dart';
+import 'features/shot_log/shot_log_view.dart';
 import 'features/onboarding/onboarding_view.dart';
 import 'features/duo/duo_layout_adapter.dart';
 import 'features/rotation/body_rotation_map.dart';
@@ -137,6 +137,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
     super.initState();
     PurchaseService.instance.addListener(_onPurchaseStateChanged);
     PurchaseService.instance.refreshLocalizedPrices();
+    PurchaseService.instance.syncCurrentEntitlements();
     final AppStorageSnapshot snapshot = AppPersistence.instance.current;
     _logs = List<InjectionRecord>.from(snapshot.logs);
     _dailyProteinGrams = snapshot.dailyProteinGrams;
@@ -218,6 +219,14 @@ class _MainShellScreenState extends State<MainShellScreen> {
   void _handleAddLog(InjectionRecord record) {
     HapticFeedbackService.heavyImpact();
     setState(() => _logs.insert(0, record));
+    _persistCurrentState();
+    _syncRemindersForCurrentLocale(context.locale.language);
+  }
+
+  void _handleDeleteLog(String recordId) {
+    if (_logs.length <= 1) return;
+    HapticFeedbackService.lightImpact();
+    setState(() => _logs.removeWhere((InjectionRecord r) => r.id == recordId));
     _persistCurrentState();
     _syncRemindersForCurrentLocale(context.locale.language);
   }
@@ -316,7 +325,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
       logs: _logs,
       now: now,
       isProUnlocked: isPro,
-      onToggleProPreview: PurchaseService.instance.toggleProForTesting,
+      onRequestUnlockPro: () => showDoseFlowPaywallModal(context),
       proteinGrams: _dailyProteinGrams,
       targetProteinGrams: _targetProteinGrams,
       waterMl: _dailyWaterMl,
@@ -342,16 +351,19 @@ class _MainShellScreenState extends State<MainShellScreen> {
       startWeightKg: _startWeightKg,
       currentWeightKg: estimatedCurrentWeight,
       isProUnlocked: isPro,
-      onRequestUnlockPro: PurchaseService.instance.toggleProForTesting,
+      onRequestUnlockPro: () => showDoseFlowPaywallModal(context),
     );
 
     final List<Widget> pages = [
       dashboardPage,
-      ShotLogAndCalculatorView(logs: _logs, isProUnlocked: isPro, onAddLog: _handleAddLog, onRequestUnlockPro: PurchaseService.instance.toggleProForTesting),
+      ShotLogView(
+        logs: _logs,
+        onAddLog: _handleAddLog,
+        onDeleteLog: _handleDeleteLog,
+      ),
       analyticsPage,
       SettingsAndPaywallView(
         isProUnlocked: isPro,
-        onTogglePro: PurchaseService.instance.toggleProForTesting,
         logs: _logs,
         startWeightKg: _startWeightKg,
         currentWeightKg: estimatedCurrentWeight,
@@ -394,8 +406,22 @@ class _MainShellScreenState extends State<MainShellScreen> {
           _persistCurrentState();
         },
         onToggleICloudBackup: (bool enable) async {
+          final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
           if (enable) {
-            await PrivacySecurityService.instance.syncBackupToICloud();
+            final bool ok = await PrivacySecurityService.instance.syncBackupToICloud();
+            if (!mounted) return;
+            if (!ok) {
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(
+                    isZh
+                        ? '⚠️ iCloud 目前無法使用，您的資料仍安全保存於本機，也可使用下方本機加密備份。'
+                        : '⚠️ iCloud is currently unavailable. Your data remains safely stored locally.',
+                  ),
+                ),
+              );
+              return;
+            }
           }
           if (!mounted) return;
           setState(() {
@@ -454,12 +480,13 @@ class _MainShellScreenState extends State<MainShellScreen> {
   }
 }
 
-class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
+class HomeDashboardView extends StatelessWidget {
+  const HomeDashboardView({
     super.key,
     required this.logs,
     required this.now,
     required this.isProUnlocked,
-    required this.onToggleProPreview,
+    required this.onRequestUnlockPro,
     required this.proteinGrams,
     required this.targetProteinGrams,
     required this.waterMl,
@@ -476,7 +503,7 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
   final List<InjectionRecord> logs;
   final DateTime now;
   final bool isProUnlocked;
-  final VoidCallback onToggleProPreview;
+  final VoidCallback onRequestUnlockPro;
   final int proteinGrams;
   final int targetProteinGrams;
   final int waterMl;
@@ -563,7 +590,7 @@ class HomeDashboardView extends StatelessWidget {  const HomeDashboardView({
           logs: logs,
           now: now,
           isProUnlocked: isProUnlocked,
-          onToggleProPreview: onToggleProPreview,
+          onRequestUnlockPro: onRequestUnlockPro,
           onOpenSwiftCodeDialog: kDebugMode
               ? () => SwiftReferenceExporter.showSwiftCodeModal(context)
               : null,
@@ -942,7 +969,12 @@ class AnalyticsView extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: const BoxDecoration(color: DoseFlowColors.cardElevated, borderRadius: BorderRadius.all(Radius.circular(10))),
-                  child: Text(isZh ? '💡 臨床趨勢：升級 5.0mg 後每週減重提升至 1.5 ${unit.symbol}，有效克服平臺期。' : '💡 Titrating to 5.0mg accelerated weight loss to 1.5 ${unit.symbol}/week.', style: const TextStyle(fontSize: 11.5, color: DoseFlowColors.textSecondary)),
+                  child: Text(
+                    isZh
+                        ? '💡 折線依您記錄的劑量區間著色（僅供個人趨勢視覺化參考，調整劑量請務必諮詢處方醫師）。'
+                        : '💡 Segments are colored by your logged dose tier for visual reference only. Always consult your physician before changing doses.',
+                    style: const TextStyle(fontSize: 11.5, color: DoseFlowColors.textSecondary),
+                  ),
                 ),
               ],
             ),
@@ -983,8 +1015,8 @@ class AnalyticsView extends StatelessWidget {
                       Expanded(
                         child: Text(
                           isZh
-                            ? 'AI 建議打針時機：${recommendation.recommendedTimeLabel}\n${recommendation.rationale(lang)}'
-                            : 'AI Timing: ${recommendation.recommendedTimeLabel}\n${recommendation.rationale(lang)}',
+                            ? '個人週期紀錄參考：${recommendation.recommendedTimeLabel}\n${recommendation.rationale(lang)}'
+                            : 'Personal Cycle Pattern: ${recommendation.recommendedTimeLabel}\n${recommendation.rationale(lang)}',
                           style: const TextStyle(fontSize: 12.0, fontWeight: FontWeight.w700, color: Color(0xFFD6CCFF), height: 1.45),
                         ),
                       ),
@@ -1124,7 +1156,6 @@ class SettingsAndPaywallView extends StatelessWidget {
   const SettingsAndPaywallView({
     super.key,
     required this.isProUnlocked,
-    required this.onTogglePro,
     required this.logs,
     required this.startWeightKg,
     required this.currentWeightKg,
@@ -1143,7 +1174,6 @@ class SettingsAndPaywallView extends StatelessWidget {
   });
 
   final bool isProUnlocked;
-  final VoidCallback onTogglePro;
   final List<InjectionRecord> logs;
   final double startWeightKg;
   final double currentWeightKg;
@@ -1473,50 +1503,41 @@ class SettingsAndPaywallView extends StatelessWidget {
                 PulsingCtaButton(
                   onPressed: () {
                     HapticFeedbackService.lightImpact();
-                    if (!isProUnlocked) _showPaywallModal(context);
+                    if (!isProUnlocked) {
+                      showDoseFlowPaywallModal(context);
+                    } else {
+                      _showManageSubscriptionDialog(context);
+                    }
                   },
                   icon: Icons.bolt_rounded,
                   label: isProUnlocked ? (isZh ? '管理權益方案' : 'Manage Pro Access') : s.unlockProButton,
                   color: isProUnlocked ? DoseFlowColors.mint : DoseFlowColors.cyan,
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    TextButton.icon(
-                      onPressed: () async {
-                        HapticFeedbackService.lightImpact();
-                        final bool restored = await PurchaseService.instance.restorePurchases();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                restored
-                                    ? (isZh ? '✅ 已成功恢復您的 Pro 授權！' : '✅ Pro access restored!')
-                                    : (isZh ? '未找到有效歷史購買紀錄。' : 'No active purchases found.'),
-                              ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      HapticFeedbackService.lightImpact();
+                      final bool restored = await PurchaseService.instance.restorePurchases();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              restored
+                                  ? (isZh ? '✅ 已成功恢復您的 Pro 授權！' : '✅ Pro access restored!')
+                                  : (isZh ? '未找到有效歷史購買紀錄。' : 'No active purchases found.'),
                             ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.restore_rounded, size: 15),
-                      label: Text(
-                        isZh ? '恢復購買' : 'Restore Purchases',
-                        style: const TextStyle(fontSize: 11.5, color: DoseFlowColors.cyan, fontWeight: FontWeight.w700),
-                      ),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.restore_rounded, size: 15),
+                    label: Text(
+                      isZh ? '恢復購買' : 'Restore Purchases',
+                      style: const TextStyle(fontSize: 11.5, color: DoseFlowColors.cyan, fontWeight: FontWeight.w700),
                     ),
-                    if (kDebugMode)
-                      TextButton(
-                        onPressed: () {
-                          HapticFeedbackService.lightImpact();
-                          onTogglePro();
-                        },
-                        child: Text(
-                          isProUnlocked ? (isZh ? '返回免費版' : 'Debug Free') : (isZh ? 'Debug 測試解鎖' : 'Debug Pro'),
-                          style: const TextStyle(fontSize: 11.5, color: DoseFlowColors.textMuted),
-                        ),
-                      ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -1587,10 +1608,10 @@ class SettingsAndPaywallView extends StatelessWidget {
                       );
                       Clipboard.setData(ClipboardData(text: str));
                       HapticFeedbackService.successPattern();
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isZh ? '✅ 無涉隱私數據 ‧ 食慾報告文案已複製入剪貼簿，請貼往社群發布！' : '✅ Report string ready for pasting to Reddit!')));
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isZh ? '✅ 無涉隱私數據 ‧ 進度摘要已複製至剪貼簿！' : '✅ Privacy-safe progress summary copied to clipboard!')));
                     },
                     icon: const Icon(Icons.send_rounded, size: 18),
-                    label: Text(isZh ? '發布榮譽心智健康戰報' : 'Copy Shiller Flex Report'),
+                    label: Text(isZh ? '複製隱私安全進度摘要' : 'Copy Privacy-Safe Summary'),
                     style: FilledButton.styleFrom(backgroundColor: DoseFlowColors.cardElevated, foregroundColor: DoseFlowColors.textPrimary, padding: const EdgeInsets.symmetric(vertical: 14)),
                   ),
                 ),
@@ -1610,20 +1631,53 @@ class SettingsAndPaywallView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Row(
-                  children: [
-                    const Icon(Icons.storefront_rounded, color: DoseFlowColors.purple, size: 22),
+                  children: <Widget>[
+                    const Icon(Icons.gavel_rounded, color: DoseFlowColors.mint, size: 22),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(s.asoSectionHeader, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: DoseFlowColors.textPrimary))),
+                    Expanded(
+                      child: Text(
+                        isZh ? '隱私權政策、服務條款與醫療免責' : 'Privacy Policy, Terms & Medical Info',
+                        style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: DoseFlowColors.textPrimary),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () { HapticFeedbackService.lightImpact(); _showAsoInspectorDialog(context); },
-                    icon: const Icon(Icons.copy_all_rounded, size: 16),
-                    label: Text(isZh ? '獲取 Apple/Google 送審合規資料套件' : 'ASO Copy Hub & Disclaimer'),
-                  ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    OutlinedButton.icon(
+                      onPressed: () => showDialog<void>(
+                        context: context,
+                        builder: (_) => const LegalComplianceViewerDialog(
+                          initialDocType: ComplianceDocType.privacyPolicy,
+                        ),
+                      ),
+                      icon: const Icon(Icons.privacy_tip_outlined, size: 16),
+                      label: Text(isZh ? '隱私權政策' : 'Privacy Policy', style: const TextStyle(fontSize: 11.5)),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => showDialog<void>(
+                        context: context,
+                        builder: (_) => const LegalComplianceViewerDialog(
+                          initialDocType: ComplianceDocType.termsOfService,
+                        ),
+                      ),
+                      icon: const Icon(Icons.description_outlined, size: 16),
+                      label: Text(isZh ? '服務條款 (EULA)' : 'Terms (EULA)', style: const TextStyle(fontSize: 11.5)),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => showDialog<void>(
+                        context: context,
+                        builder: (_) => const LegalComplianceViewerDialog(
+                          initialDocType: ComplianceDocType.fdaCitations,
+                        ),
+                      ),
+                      icon: const Icon(Icons.verified_user_outlined, size: 16),
+                      label: Text(isZh ? 'FDA 仿單文獻引用' : 'FDA Citations', style: const TextStyle(fontSize: 11.5)),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1695,364 +1749,401 @@ class SettingsAndPaywallView extends StatelessWidget {
     ));
   }
 
-  // ==========================================
-  // 十級抗震支付點鈔機牆 (_showPaywallModal)
-  // 混合 【康納曼 / 米爾格羅姆誘餌 / 塞勒 / 謝林】 極致絞肉機
-  // ==========================================
-  void _showPaywallModal(BuildContext context) {
-    PurchaseService.instance.refreshLocalizedPrices();
-    final AppStrings s = context.strings;
-    final AppLanguage lang = context.locale.language;
-    final bool isZh = lang.isZh;
+  void _showManageSubscriptionDialog(BuildContext context) {
+    final bool isZh = context.locale.isZh;
+    final SubscriptionTier tier = PurchaseService.instance.currentEntitlement.tier;
+    final ProductItem item = DoseFlowProductCatalog.getByTier(tier);
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: Text(
+          isZh ? 'DoseFlow Pro 訂閱權益' : 'DoseFlow Pro Membership',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        ),
+        content: Text(
+          isZh
+              ? '目前啟用方案：${item.titleZh}\n\n如需變更或取消訂閱，請前往 iPhone「設定」> Apple ID >「訂閱項目」進行管理。'
+              : 'Active Plan: ${item.titleEn}\n\nTo manage or cancel your subscription, open iOS Settings > Apple ID > Subscriptions.',
+          style: const TextStyle(fontSize: 13, height: 1.5),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(isZh ? '關閉' : 'Close'),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-    Future<void> triggerPurchase(
-      BuildContext sheetCtx,
-      SubscriptionTier tier,
-    ) async {
-      HapticFeedbackService.mediumImpact();
-      Navigator.pop(sheetCtx);
-      final bool ok = await PurchaseService.instance.purchase(tier);
-      if (ok) {
-        HapticFeedbackService.successPattern();
-      } else if (context.mounted) {
+/// 全域共用 StoreKit 2 付費牆彈窗（所有 Pro 鎖頭與升級按鈕皆必須走此真實內購流程）
+void showDoseFlowPaywallModal(BuildContext context) {
+  PurchaseService.instance.refreshLocalizedPrices();
+  final AppStrings s = context.strings;
+  final AppLanguage lang = context.locale.language;
+  final bool isZh = lang.isZh;
+
+  Future<void> triggerPurchase(
+    BuildContext sheetCtx,
+    SubscriptionTier tier,
+  ) async {
+    HapticFeedbackService.mediumImpact();
+    final bool ok = await PurchaseService.instance.purchase(tier);
+    if (ok) {
+      HapticFeedbackService.successPattern();
+      if (sheetCtx.mounted) Navigator.pop(sheetCtx);
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              PurchaseService.instance.lastErrorMessage ??
-                  (isZh ? '購買未完成或已取消' : 'Purchase cancelled'),
+              isZh ? '✅ 感謝訂閱！已成功解鎖 DoseFlow Pro 完整功能。' : '✅ Thank you! DoseFlow Pro is now unlocked.',
             ),
           ),
         );
       }
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            PurchaseService.instance.lastErrorMessage ??
+                (isZh ? '購買未完成或已取消' : 'Purchase cancelled'),
+          ),
+        ),
+      );
     }
+  }
 
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: DoseFlowColors.cardSurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (BuildContext sheetContext) {
-        return ListenableBuilder(
-          listenable: PurchaseService.instance,
-          builder: (BuildContext ctx, _) {
-            final String annualPrice =
-                PurchaseService.instance.displayPriceFor(SubscriptionTier.annual);
-            final String monthlyPrice =
-                PurchaseService.instance.displayPriceFor(SubscriptionTier.monthly);
-            final String lifetimePrice =
-                PurchaseService.instance.displayPriceFor(SubscriptionTier.lifetime);
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: DoseFlowColors.cardSurface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    builder: (BuildContext sheetContext) {
+      return ListenableBuilder(
+        listenable: PurchaseService.instance,
+        builder: (BuildContext ctx, _) {
+          final bool isBusy = PurchaseService.instance.status == PurchaseStatus.purchasing ||
+              PurchaseService.instance.status == PurchaseStatus.verifying;
+          final String annualPrice =
+              PurchaseService.instance.displayPriceFor(SubscriptionTier.annual);
+          final String monthlyPrice =
+              PurchaseService.instance.displayPriceFor(SubscriptionTier.monthly);
+          final String lifetimePrice =
+              PurchaseService.instance.displayPriceFor(SubscriptionTier.lifetime);
 
-            return SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Center(
-                      child: Container(
-                        width: 42,
-                        height: 4,
-                        decoration: const BoxDecoration(
-                          color: DoseFlowColors.cardBorder,
-                          borderRadius: BorderRadius.all(Radius.circular(999)),
-                        ),
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 4,
+                      decoration: const BoxDecoration(
+                        color: DoseFlowColors.cardBorder,
+                        borderRadius: BorderRadius.all(Radius.circular(999)),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      s.paywallHeadline,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    s.paywallHeadline,
+                    style: const TextStyle(
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w900,
+                      color: DoseFlowColors.textPrimary,
+                      height: 1.25,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DoseFlowColors.danger.withValues(alpha: 0.16),
+                      borderRadius: const BorderRadius.all(Radius.circular(6)),
+                    ),
+                    child: Text(
+                      BehavioralEconomicsEngine.getKahnemanLossFramedHeadline(lang),
                       style: const TextStyle(
-                        fontSize: 16.5,
-                        fontWeight: FontWeight.w900,
-                        color: DoseFlowColors.textPrimary,
-                        height: 1.25,
+                        color: Color(0xFFFCA5A5),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: DoseFlowColors.danger.withValues(alpha: 0.16),
-                        borderRadius: const BorderRadius.all(Radius.circular(6)),
-                      ),
-                      child: Text(
-                        BehavioralEconomicsEngine.getKahnemanLossFramedHeadline(lang),
-                        style: const TextStyle(
-                          color: Color(0xFFFCA5A5),
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
+                  ),
+                  if (isBusy) ...<Widget>[
                     const SizedBox(height: 12),
-                    InkWell(
-                      borderRadius: const BorderRadius.all(Radius.circular(16)),
-                      onTap: () => triggerPurchase(
-                        sheetContext,
-                        SubscriptionTier.annual,
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: DoseFlowColors.mint.withValues(alpha: 0.10),
-                          borderRadius: const BorderRadius.all(Radius.circular(16)),
-                          border: Border.all(
-                            color: DoseFlowColors.mint,
-                            width: 1.8,
-                          ),
-                        ),
-                        child: Row(
-                          children: <Widget>[
-                            const Icon(
-                              Icons.local_fire_department_rounded,
-                              color: DoseFlowColors.mint,
-                              size: 24,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  Text(
-                                    BehavioralEconomicsEngine.getThalerDefaultNudgeBadge(lang),
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800,
-                                      color: DoseFlowColors.mint,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    isZh
-                                        ? '年繳 Pro 方案（含 3 天免費試用）'
-                                        : 'Annual Pro (3-Day Free Trial)',
-                                    style: const TextStyle(
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w800,
-                                      color: DoseFlowColors.textPrimary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Text(
-                              '$annualPrice / ${isZh ? "年" : "yr"}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 14,
-                                color: DoseFlowColors.mint,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    InkWell(
-                      borderRadius: const BorderRadius.all(Radius.circular(14)),
-                      onTap: () => triggerPurchase(
-                        sheetContext,
-                        SubscriptionTier.monthly,
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: DoseFlowColors.cardElevated,
-                          borderRadius: const BorderRadius.all(Radius.circular(14)),
-                          border: Border.all(color: DoseFlowColors.cardBorder),
-                        ),
-                        child: Row(
-                          children: <Widget>[
-                            const Icon(
-                              Icons.calendar_month_rounded,
-                              size: 20,
-                              color: DoseFlowColors.textSecondary,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                isZh ? '月費方案（彈性無綁約）' : 'Monthly Pro (Flexible)',
-                                style: const TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: DoseFlowColors.textPrimary,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              '$monthlyPrice / ${isZh ? "月" : "mo"}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 13,
-                                color: DoseFlowColors.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    InkWell(
-                      borderRadius: const BorderRadius.all(Radius.circular(14)),
-                      onTap: () => triggerPurchase(
-                        sheetContext,
-                        SubscriptionTier.lifetime,
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: DoseFlowColors.cardElevated,
-                          borderRadius: const BorderRadius.all(Radius.circular(14)),
-                          border: Border.all(
-                            color: const Color(0xFFD946EF),
-                            width: 1.2,
-                          ),
-                        ),
-                        child: Row(
-                          children: <Widget>[
-                            const Icon(
-                              Icons.diamond_rounded,
-                              size: 20,
-                              color: Color(0xFFE879F9),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  Text(
-                                    BehavioralEconomicsEngine.getMilgromDecoyLifetimeLabel(lang),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w800,
-                                      color: Color(0xFFF0ABFC),
-                                    ),
-                                  ),
-                                  Text(
-                                    isZh
-                                        ? '一次買斷，永久解鎖全部進階功能'
-                                        : 'One-time purchase, lifetime access',
-                                    style: const TextStyle(
-                                      fontSize: 10.5,
-                                      color: DoseFlowColors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Text(
-                              lifetimePrice,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 13,
-                                color: DoseFlowColors.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    PulsingCtaButton(
-                      onPressed: () => triggerPurchase(
-                        sheetContext,
-                        SubscriptionTier.annual,
-                      ),
-                      icon: Icons.assignment_turned_in_rounded,
-                      label: BehavioralEconomicsEngine.getSchellingUlyssesContractPledge(lang),
-                      color: DoseFlowColors.mint,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        TextButton(
-                          onPressed: () async {
-                            final bool ok =
-                                await PurchaseService.instance.restorePurchases();
-                            if (sheetContext.mounted) Navigator.pop(sheetContext);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    ok
-                                        ? (isZh ? '✅ 已恢復訂閱！' : '✅ Restored!')
-                                        : (isZh
-                                            ? '未偵測到有效訂閱'
-                                            : 'No purchases found'),
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                          child: Text(
-                            isZh ? '恢復購買' : 'Restore',
-                            style: const TextStyle(fontSize: 11.5),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => showDialog<void>(
-                            context: context,
-                            builder: (_) => const LegalComplianceViewerDialog(
-                              initialDocType: ComplianceDocType.privacyPolicy,
-                            ),
-                          ),
-                          child: Text(
-                            isZh ? '隱私權政策' : 'Privacy',
-                            style: const TextStyle(fontSize: 11.5),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => showDialog<void>(
-                            context: context,
-                            builder: (_) => const LegalComplianceViewerDialog(
-                              initialDocType: ComplianceDocType.termsOfService,
-                            ),
-                          ),
-                          child: Text(
-                            isZh ? '服務條款' : 'Terms (EULA)',
-                            style: const TextStyle(fontSize: 11.5),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Text(
-                      isZh
-                          ? '年繳/月繳訂閱將於試用或當期結束前 24 小時透過您的 Apple ID 自動續訂扣款，可隨時至 App Store 訂閱設定取消。'
-                          : 'Subscriptions auto-renew via Apple ID unless cancelled at least 24h before period ends.',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 10.0,
-                        color: Color(0xFF94A3B8),
-                      ),
-                    ),
+                    const LinearProgressIndicator(color: DoseFlowColors.mint),
                   ],
-                ),
+                  const SizedBox(height: 12),
+                  InkWell(
+                    borderRadius: const BorderRadius.all(Radius.circular(16)),
+                    onTap: isBusy
+                        ? null
+                        : () => triggerPurchase(
+                              sheetContext,
+                              SubscriptionTier.annual,
+                            ),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: DoseFlowColors.mint.withValues(alpha: 0.10),
+                        borderRadius: const BorderRadius.all(Radius.circular(16)),
+                        border: Border.all(
+                          color: DoseFlowColors.mint,
+                          width: 1.8,
+                        ),
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          const Icon(
+                            Icons.local_fire_department_rounded,
+                            color: DoseFlowColors.mint,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  BehavioralEconomicsEngine.getThalerDefaultNudgeBadge(lang),
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: DoseFlowColors.mint,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  isZh
+                                      ? '年繳 Pro 方案（含 3 天免費試用）'
+                                      : 'Annual Pro (3-Day Free Trial)',
+                                  style: const TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: DoseFlowColors.textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '$annualPrice / ${isZh ? "年" : "yr"}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14,
+                              color: DoseFlowColors.mint,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  InkWell(
+                    borderRadius: const BorderRadius.all(Radius.circular(14)),
+                    onTap: isBusy
+                        ? null
+                        : () => triggerPurchase(
+                              sheetContext,
+                              SubscriptionTier.monthly,
+                            ),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: DoseFlowColors.cardElevated,
+                        borderRadius: const BorderRadius.all(Radius.circular(14)),
+                        border: Border.all(color: DoseFlowColors.cardBorder),
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          const Icon(
+                            Icons.calendar_month_rounded,
+                            size: 20,
+                            color: DoseFlowColors.textSecondary,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              isZh ? '月費方案（彈性無綁約）' : 'Monthly Pro (Flexible)',
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: DoseFlowColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '$monthlyPrice / ${isZh ? "月" : "mo"}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                              color: DoseFlowColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  InkWell(
+                    borderRadius: const BorderRadius.all(Radius.circular(14)),
+                    onTap: isBusy
+                        ? null
+                        : () => triggerPurchase(
+                              sheetContext,
+                              SubscriptionTier.lifetime,
+                            ),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: DoseFlowColors.cardElevated,
+                        borderRadius: const BorderRadius.all(Radius.circular(14)),
+                        border: Border.all(
+                          color: const Color(0xFFD946EF),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          const Icon(
+                            Icons.diamond_rounded,
+                            size: 20,
+                            color: Color(0xFFE879F9),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  BehavioralEconomicsEngine.getMilgromDecoyLifetimeLabel(lang),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFFF0ABFC),
+                                  ),
+                                ),
+                                Text(
+                                  isZh
+                                      ? '一次買斷，永久解鎖全部進階功能'
+                                      : 'One-time purchase, lifetime access',
+                                  style: const TextStyle(
+                                    fontSize: 10.5,
+                                    color: DoseFlowColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            lifetimePrice,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                              color: DoseFlowColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  PulsingCtaButton(
+                    onPressed: isBusy
+                        ? () {}
+                        : () => triggerPurchase(
+                              sheetContext,
+                              SubscriptionTier.annual,
+                            ),
+                    icon: Icons.assignment_turned_in_rounded,
+                    label: BehavioralEconomicsEngine.getSchellingUlyssesContractPledge(lang),
+                    color: DoseFlowColors.mint,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      TextButton(
+                        onPressed: isBusy
+                            ? null
+                            : () async {
+                                final bool ok =
+                                    await PurchaseService.instance.restorePurchases();
+                                if (sheetContext.mounted) Navigator.pop(sheetContext);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        ok
+                                            ? (isZh ? '✅ 已恢復訂閱！' : '✅ Restored!')
+                                            : (isZh
+                                                ? '未偵測到有效訂閱'
+                                                : 'No purchases found'),
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                        child: Text(
+                          isZh ? '恢復購買' : 'Restore',
+                          style: const TextStyle(fontSize: 11.5),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => showDialog<void>(
+                          context: context,
+                          builder: (_) => const LegalComplianceViewerDialog(
+                            initialDocType: ComplianceDocType.privacyPolicy,
+                          ),
+                        ),
+                        child: Text(
+                          isZh ? '隱私權政策' : 'Privacy',
+                          style: const TextStyle(fontSize: 11.5),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => showDialog<void>(
+                          context: context,
+                          builder: (_) => const LegalComplianceViewerDialog(
+                            initialDocType: ComplianceDocType.termsOfService,
+                          ),
+                        ),
+                        child: Text(
+                          isZh ? '服務條款' : 'Terms (EULA)',
+                          style: const TextStyle(fontSize: 11.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    isZh
+                        ? '年繳/月繳訂閱將於試用或當期結束前 24 小時透過您的 Apple ID 自動續訂扣款，可隨時至 App Store 訂閱設定取消。'
+                        : 'Subscriptions auto-renew via Apple ID unless cancelled at least 24h before period ends.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 10.0,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
               ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showAsoInspectorDialog(BuildContext context) {
-    // Basic dialog template retained logic. Implementation handles exact copies.
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('ASO Engine Output', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-        content: SelectableText(context.strings.asoFullDescription),
-        actions: <Widget>[TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
-      )
-    );
-  }
+            ),
+          );
+        },
+      );
+    },
+  );
 }
 
 // -------------------------------------------------------------

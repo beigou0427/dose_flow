@@ -458,14 +458,14 @@ class DoseConcentrationCard extends StatelessWidget {
     required this.logs,
     required this.now,
     required this.isProUnlocked,
-    required this.onToggleProPreview,
+    required this.onRequestUnlockPro,
     this.onOpenSwiftCodeDialog,
   });
 
   final List<InjectionRecord> logs;
   final DateTime now;
   final bool isProUnlocked;
-  final VoidCallback onToggleProPreview;
+  final VoidCallback onRequestUnlockPro;
   final VoidCallback? onOpenSwiftCodeDialog;
 
   /// 根據 Bateman 序列計算當前體內相對高峰百分比 (0~100%)
@@ -728,7 +728,7 @@ class DoseConcentrationCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 10),
                         FilledButton.icon(
-                          onPressed: onToggleProPreview,
+                          onPressed: onRequestUnlockPro,
                           icon: const Icon(Icons.bolt_rounded, size: 18),
                           label: Text(s.unlockProButton),
                           style: FilledButton.styleFrom(
@@ -743,40 +743,23 @@ class DoseConcentrationCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             // 常駐 FDA 1.4.1 醫療文獻引用與免責聲明按鈕
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                Expanded(
-                  child: TextButton.icon(
-                    onPressed: () => _showMedicalCitationsModal(context),
-                    icon: const Icon(
-                      Icons.verified_user_outlined,
-                      size: 16,
-                      color: Color(0xFFA0B2C6),
-                    ),
-                    label: Text(
-                      s.medicalDisclaimerButtonLabel,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: Color(0xFFA0B2C6),
-                      ),
-                    ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => _showMedicalCitationsModal(context),
+                icon: const Icon(
+                  Icons.verified_user_outlined,
+                  size: 16,
+                  color: Color(0xFFA0B2C6),
+                ),
+                label: Text(
+                  s.medicalDisclaimerButtonLabel,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: Color(0xFFA0B2C6),
                   ),
                 ),
-                TextButton(
-                  onPressed: onToggleProPreview,
-                  child: Text(
-                    isProUnlocked
-                        ? context.locale.tr('切換免費模糊預覽', 'Preview Free Blur')
-                        : context.locale.tr('免費預覽 Pro', 'Preview Pro'),
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: accentMint,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),
@@ -836,6 +819,18 @@ class DoseConcentrationCard extends StatelessWidget {
                 Text(
                   s.fdaCitationLiraglutide,
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                const Divider(height: 20),
+                Text(
+                  context.locale.tr(
+                    '商標聲明：本程式提及之藥品名稱均屬原藥廠註冊商標，僅供使用者標記個人紀錄，本程式與任何藥廠均無從屬或授權關係。',
+                    'Trademark Notice: All medication names are trademarks of their respective owners, used strictly for personal logging. DoseFlow is not affiliated with any pharmaceutical manufacturer.',
+                  ),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFFA0B2C6),
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),

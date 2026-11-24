@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app_localization.dart';
+import 'app_theme.dart';
 
 /// 法規合規文件類型枚舉
 enum ComplianceDocType {
@@ -162,6 +163,78 @@ class LegalComplianceHub {
 </html>''';
   }
 
+  /// 產生給 App 內使用者閱讀的純文字隱私權政策（非原始 HTML）
+  static String generatePrivacyPolicyPlainText(AppLanguage lang) {
+    if (lang.isZh) {
+      return '''瘦瘦針紀錄 Pro (DoseFlow) 隱私權政策
+生效日期：2026 年 11 月 1 日
+
+1. 100% 本地端架構與零外部伺服器
+本應用程式堅守最高隱私標準，不架設任何外部使用者資料庫，也不需註冊帳號。您的施打日誌、體重紀錄、微習慣進度與偏好設定皆儲存在您的個人裝置本機中；您可選擇自行使用 Base64 本機備份或個人 Apple iCloud 進行備份。開發者無法且永遠不會存取您的健康數據。
+
+2. 零廣告追蹤與第三方 SDK
+本程式不包含任何第三方廣告追蹤或數據分析 SDK，絕不向任何第三方或數據經紀商出售或分享您的個人健康紀錄。
+
+3. 資料控制權與刪除
+您擁有完整資料主權，可隨時透過本機備份匯出個人紀錄，或直接刪除 App 以移除裝置上所有本地資料。
+
+4. 聯絡與支援
+線上隱私權政策：https://beigou0427.github.io/dose_flow/privacy.html
+支援信箱：support@doseflow.app''';
+    }
+    return '''DoseFlow Privacy Policy
+Effective Date: November 1, 2026
+
+1. 100% Local-First Architecture (Zero Cloud Servers)
+DoseFlow requires no account registration and operates zero external servers. All injection logs, weight entries, micro-habits, and settings remain exclusively on your personal device (with optional local Base64 backup or private Apple iCloud backup). The developer cannot access your personal health data.
+
+2. Zero Ad Trackers or Third-Party Brokers
+DoseFlow includes zero advertising or third-party tracking SDKs and never sells or shares your health records.
+
+3. Data Ownership & Deletion
+You retain full ownership of your logs and may export them locally or remove all on-device data at any time by uninstalling the app.
+
+4. Contact & Online Policy
+Privacy Policy URL: https://beigou0427.github.io/dose_flow/privacy.html
+Support: support@doseflow.app''';
+  }
+
+  /// 產生給 App 內使用者閱讀的純文字服務條款、訂閱規範與商標免責
+  static String generateTermsOfServicePlainText(AppLanguage lang) {
+    if (lang.isZh) {
+      return '''瘦瘦針紀錄 Pro (DoseFlow) 服務條款與醫療免責
+
+1. 醫療免責聲明（非醫療器材、無劑量計算功能）
+本程式僅供個人健康數據記錄與一般教育參考，非醫療器材，不包含任何藥物劑量計算功能，亦不提供醫療診斷或劑量調整建議。所有理論濃度曲線均依據公開 FDA 仿單（Section 12.3 Pharmacokinetics）半衰期參數以 Bateman 雙指數模型推估，不代表實際血液檢測濃度。任何用藥或劑量變更請務必諮詢您的處方醫師或藥師。
+
+2. 訂閱與自動續訂條款
+• 本程式提供月繳、年繳（含 3 天免費試用）與終身買斷方案；實際價格依 App Store 結帳畫面顯示為準。
+• 確認購買時費用將由您的 Apple ID 帳號扣款。
+• 自動續訂訂閱將於當期或試用期結束前 24 小時自動續訂，您可隨時於 iPhone「設定」> Apple ID >「訂閱項目」中管理或取消。
+
+3. 商標聲明
+本程式內提及之藥品名稱與註冊商標（如 Mounjaro、Zepbound、Wegovy、Ozempic、Saxenda 等）均屬原藥廠所有，僅供使用者標記個人處方紀錄之用。本程式為獨立開發工具，與上述任何藥廠均無從屬、合作或授權關係。
+
+4. 標準授權合約 (Apple EULA)
+https://www.apple.com/legal/internet-services/itunes/dev/stdeula/''';
+    }
+    return '''DoseFlow Terms of Use & Medical Disclaimer
+
+1. Medical Disclaimer (Not a Medical Device / No Dosage Calculator)
+DoseFlow is intended solely for personal health logging and general educational reference. It is NOT a medical device, contains NO drug dosage calculator, and never provides medical advice, diagnosis, or titration recommendations. All concentration curves are theoretical mathematical visualizations (Bateman Function) based on published FDA Prescribing Information (Section 12.3 Pharmacokinetics) and do not represent actual blood measurements. Always consult your prescribing physician or pharmacist.
+
+2. Subscriptions & Auto-Renewal
+• Monthly, Annual (with 3-day free trial), and Lifetime options are available. Exact pricing is displayed in the App Store purchase sheet.
+• Payment is charged to your Apple ID account at confirmation of purchase.
+• Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period in iOS Settings > Apple ID > Subscriptions.
+
+3. Trademark Notice
+All medication brand names and trademarks (including Mounjaro, Zepbound, Wegovy, Ozempic, and Saxenda) are the property of their respective owners and are used solely for personal user logging identification. DoseFlow is an independent app not affiliated with or endorsed by any pharmaceutical manufacturer.
+
+4. Standard Apple EULA
+https://www.apple.com/legal/internet-services/itunes/dev/stdeula/''';
+  }
+
   /// 產生給 Apple App Store 審核員的專屬備註（直接貼入 App Store Connect Review Notes）
   static String generateAppStoreReviewNotes(AppLanguage lang) {
     return '''
@@ -172,23 +245,24 @@ Dear Apple App Review Team,
 
 Thank you for reviewing DoseFlow! Please note the following regulatory assurances:
 
-1. COMPLIANCE WITH GUIDELINE 1.4.1 (SAFETY - MEDICAL DISCLAIMER):
-• DoseFlow is designed solely as a personal logging and habit tracker for patients undergoing GLP-1 therapy under physician supervision.
-• The live medication concentration curve uses a standard Bateman dual-exponential pharmacokinetic function calibrated strictly against Section 12.3 (Pharmacokinetics) of official FDA Prescribing Information:
+1. COMPLIANCE WITH GUIDELINE 1.4.1 & 1.4.2 (MEDICAL SAFETY — NO DOSAGE CALCULATOR):
+• DoseFlow is strictly a personal health journal, injection site rotation log, and daily habit tracker for users following a physician-prescribed routine.
+• The app contains ZERO drug dosage calculators, syringe unit converters, or reconstitution math tools. Users only record the dose already prescribed by their physician.
+• The optional concentration trend visualization uses a theoretical Bateman exponential reference curve derived from published FDA Prescribing Information Section 12.3 (Pharmacokinetics) half-life literature, clearly marked as an educational reference only:
   - Eli Lilly Mounjaro/Zepbound (Tirzepatide): USPI Section 12.3 (Mean half-life ~5 days).
   - Novo Nordisk Wegovy/Ozempic (Semaglutide): USPI Section 12.3 (Half-life ~1 week).
-• The app NEVER provides dose escalation, medical advice, or clinical instructions. Prominent medical citations and disclaimers are anchored permanently across all screens.
+• The app NEVER calculates medical dosages or recommends dose adjustments. Prominent medical citations and disclaimers are anchored permanently on screen.
 
 2. COMPLIANCE WITH GUIDELINE 5.1.1 (DATA PRIVACY & LOCAL-FIRST):
 • DoseFlow requires ZERO user registration and operates ZERO external servers.
 • All health and injection records are stored 100% locally on the user's device and private iCloud.
 • HealthKit data (Body Mass, Dietary Water, Protein) is strictly used for in-app personal charting and never transmitted externally.
 
-3. IN-APP PURCHASE & SUBSCRIPTION TESTING (SANDBOX):
-• Tier 1: Monthly (${r"$6.99"} / NT\$ 150)
-• Tier 2: Annual with 3-Day Free Trial (${r"$39.99"} / NT\$ 990)
-• Tier 3: Lifetime (${r"$79.99"} / NT\$ 1,990)
-• The app includes an offline sandbox simulation mode accessible via the Settings tab.
+3. IN-APP PURCHASE & SUBSCRIPTION TESTING (GUIDELINE 2.1(b) — STOREKIT 2):
+• Tier 1: Monthly (com.doseflow.app.monthly)
+• Tier 2: Annual with 3-Day Free Trial (com.doseflow.app.annual)
+• Tier 3: Lifetime (com.doseflow.app.lifetime)
+• Pro features remain locked by default until a verified StoreKit 2 purchase or Restore Purchases transaction succeeds. All "Unlock Pro" CTAs open the native StoreKit 2 paywall modal.
 
 Contact: support@doseflow.app
 ================================================================================
@@ -233,26 +307,36 @@ class LegalComplianceViewerDialog extends StatefulWidget {
 
 class _LegalComplianceViewerDialogState
     extends State<LegalComplianceViewerDialog> {
+  static const List<ComplianceDocType> _userVisibleDocTypes =
+      <ComplianceDocType>[
+    ComplianceDocType.privacyPolicy,
+    ComplianceDocType.termsOfService,
+    ComplianceDocType.fdaCitations,
+  ];
+
   late ComplianceDocType _selectedType;
 
   @override
   void initState() {
     super.initState();
-    _selectedType = widget.initialDocType;
+    _selectedType = _userVisibleDocTypes.contains(widget.initialDocType)
+        ? widget.initialDocType
+        : ComplianceDocType.privacyPolicy;
   }
 
   String _getDocumentBody(AppLanguage lang) {
     switch (_selectedType) {
       case ComplianceDocType.privacyPolicy:
-        return LegalComplianceHub.generatePrivacyPolicyHtml(lang);
+        return LegalComplianceHub.generatePrivacyPolicyPlainText(lang);
       case ComplianceDocType.termsOfService:
-        return LegalComplianceHub.generateTermsOfServiceHtml(lang);
+        return LegalComplianceHub.generateTermsOfServicePlainText(lang);
       case ComplianceDocType.fdaCitations:
-        return '${LegalComplianceHub.fdaTirzepatideDetails}\n'
+        return '${LegalComplianceHub.getMedicalDisclaimerStatement(lang)}\n\n'
+            '${LegalComplianceHub.fdaTirzepatideDetails}\n'
             '${LegalComplianceHub.fdaSemaglutideDetails}\n'
             '${LegalComplianceHub.fdaLiraglutideDetails}';
       case ComplianceDocType.appStoreReviewNotes:
-        return LegalComplianceHub.generateAppStoreReviewNotes(lang);
+        return LegalComplianceHub.generateTermsOfServicePlainText(lang);
     }
   }
 
@@ -265,26 +349,30 @@ class _LegalComplianceViewerDialogState
     return AlertDialog(
       title: Row(
         children: <Widget>[
-          const Icon(Icons.gavel_rounded, color: Color(0xFF0EA5E9), size: 24),
+          const Icon(Icons.gavel_rounded, color: DoseFlowColors.mint, size: 22),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              isZh ? '法規合規與提審中樞' : 'Legal Compliance & Review Hub',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              isZh ? '隱私權、服務條款與醫療文獻' : 'Privacy, Terms & Medical Citations',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: DoseFlowColors.textPrimary,
+              ),
             ),
           ),
         ],
       ),
       content: SizedBox(
-        width: 620,
-        height: 480,
+        width: 560,
+        height: 440,
         child: Column(
           children: <Widget>[
-            // 頂部文件類型切換標籤
+            // 頂部文件類型切換標籤（僅顯示使用者法規文件）
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: ComplianceDocType.values.map((ComplianceDocType type) {
+                children: _userVisibleDocTypes.map((ComplianceDocType type) {
                   final bool isSelected = type == _selectedType;
                   return Padding(
                     padding: const EdgeInsets.only(right: 6.0),
@@ -304,22 +392,23 @@ class _LegalComplianceViewerDialogState
               ),
             ),
             const SizedBox(height: 12),
-            // 文字內容預覽區
+            // 高對比深色可讀純文字區
             Expanded(
               child: Container(
-                padding: const EdgeInsets.all(12),
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: DoseFlowColors.cardElevated,
                   borderRadius: const BorderRadius.all(Radius.circular(12)),
-                  border: Border.all(color: const Color(0xFFCBD5E1)),
+                  border: Border.all(color: DoseFlowColors.cardBorder),
                 ),
                 child: SingleChildScrollView(
                   child: SelectableText(
                     contentText,
                     style: const TextStyle(
-                      fontSize: 11.0,
-                      fontFamily: 'Consolas',
-                      height: 1.45,
+                      fontSize: 12.0,
+                      color: DoseFlowColors.textPrimary,
+                      height: 1.55,
                     ),
                   ),
                 ),
@@ -329,46 +418,19 @@ class _LegalComplianceViewerDialogState
         ),
       ),
       actions: <Widget>[
-        // 匯出實體 HTML 按鈕
-        TextButton.icon(
-          onPressed: () async {
-            final String? path =
-                await LegalComplianceViewerDialog.exportHtmlFilesToDisk(lang);
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    path != null
-                        ? (isZh
-                            ? '📄 已在本機目錄生成 privacy_policy.html！可直接託管。'
-                            : '📄 Exported privacy_policy.html to project root!')
-                        : (isZh
-                            ? '⚠️ 寫入失敗或處於 Web 環境'
-                            : '⚠️ Write restricted or in Web environment'),
-                  ),
-                ),
-              );
-            }
-          },
-          icon: const Icon(Icons.file_download_outlined, size: 16),
-          label: Text(isZh ? '匯出 HTML 檔案' : 'Export HTML Files'),
-        ),
-        // 複製純文字按鈕
         TextButton.icon(
           onPressed: () {
             Clipboard.setData(ClipboardData(text: contentText));
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  isZh
-                      ? '📋 已複製內容至剪貼簿！可直接貼入 App Store Connect。'
-                      : '📋 Copied document to clipboard!',
+                  isZh ? '📋 已複製內容至剪貼簿！' : '📋 Copied text to clipboard!',
                 ),
               ),
             );
           },
           icon: const Icon(Icons.copy_rounded, size: 16),
-          label: Text(isZh ? '複製內容' : 'Copy Text'),
+          label: Text(isZh ? '複製條文' : 'Copy Text'),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),

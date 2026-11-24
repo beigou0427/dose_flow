@@ -4,11 +4,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:dose_flow/core/app_localization.dart';
 import 'package:dose_flow/core/app_persistence.dart';
+import 'package:dose_flow/core/app_theme.dart';
 import 'package:dose_flow/core/food_noise_engine.dart';
 import 'package:dose_flow/core/pharmacokinetics_engine.dart';
 import 'package:dose_flow/core/purchase_service.dart';
-import 'package:dose_flow/features/calculator/syringe_calculator_view.dart';
 import 'package:dose_flow/features/duo/duo_layout_adapter.dart';
+import 'package:dose_flow/features/shot_log/shot_log_view.dart';
 import 'package:dose_flow/main.dart';
 
 Future<void> main() async {
@@ -60,6 +61,8 @@ Future<void> main() async {
       startWeightKg: 86.0,
       targetWeightKg: 70.0,
       lastSavedTimestamp: now,
+      biometricLockEnabled: true,
+      iCloudBackupEnabled: true,
     ),
   );
   if (!PurchaseService.instance.isProUnlocked) {
@@ -102,7 +105,7 @@ Future<void> _runCaptureSequence(
     ]) {
       localeCtrl.setLanguage(lang);
       final String code = lang.isZh ? 'zh-Hant' : 'en-US';
-      for (int scene = 0; scene < 5; scene++) {
+      for (int scene = 0; scene < 4; scene++) {
         sceneNotifier.value = scene;
         await Future<void>.delayed(const Duration(milliseconds: 950));
         sock.writeln('SNAP:${code}_${scene + 1}');
@@ -139,29 +142,10 @@ class CaptureShellApp extends StatelessWidget {
       controller: localeController,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme:
-              ColorScheme.fromSeed(seedColor: const Color(0xFF0EA5E9)),
-          scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.transparent,
-            elevation: 0,
-          ),
-        ),
+        theme: DoseFlowTheme.darkTheme,
         home: ValueListenableBuilder<int>(
           valueListenable: sceneNotifier,
           builder: (BuildContext ctx, int scene, _) {
-            if (scene == 4) {
-              return DuoTabletopInjectionGuide(
-                recommendedSite: InjectionSite.leftLowerAbdomen,
-                targetDoseMg: 5.0,
-                calculatedUnits: 50.0,
-                calculatedVolumeMl: 0.50,
-                onConfirmInjection: () {},
-              );
-            }
             final AppStrings s = ctx.strings;
             final List<DailySideEffectLog> seLogs = <DailySideEffectLog>[
               DailySideEffectLog(
@@ -182,7 +166,7 @@ class CaptureShellApp extends StatelessWidget {
               logs: logs,
               now: now,
               isProUnlocked: true,
-              onToggleProPreview: () {},
+              onRequestUnlockPro: () {},
               proteinGrams: 75,
               targetProteinGrams: 90,
               waterMl: 2050,
@@ -214,14 +198,14 @@ class CaptureShellApp extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 16.5,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF0F172A),
+                      color: DoseFlowColors.textPrimary,
                     ),
                   ),
                   Text(
                     s.appSubtitle,
                     style: const TextStyle(
                       fontSize: 11.0,
-                      color: Color(0xFF64748B),
+                      color: DoseFlowColors.textSecondary,
                     ),
                   ),
                 ],
@@ -272,18 +256,36 @@ class CaptureShellApp extends StatelessWidget {
 
             Widget body = dashboardBody;
             if (scene == 1) {
-              body = ShotLogAndCalculatorView(
+              body = ShotLogView(
                 logs: logs,
-                isProUnlocked: true,
                 onAddLog: (_) {},
-                onRequestUnlockPro: () {},
               );
             } else if (scene == 2) {
               body = analyticsBody;
             } else if (scene == 3) {
               body = SettingsAndPaywallView(
                 isProUnlocked: false,
-                onTogglePro: () {},
+                logs: logs,
+                startWeightKg: 86.0,
+                currentWeightKg: 80.8,
+                shotReminderEnabled: true,
+                shotReminderWeekday: DateTime.friday,
+                shotReminderHour: 8,
+                shotReminderMinute: 30,
+                needlePrepReminderEnabled: true,
+                biometricLockEnabled: true,
+                iCloudBackupEnabled: true,
+                lastICloudSyncAt: now,
+                onReminderChanged: ({
+                  bool? shotReminderEnabled,
+                  int? shotReminderWeekday,
+                  int? shotReminderHour,
+                  int? shotReminderMinute,
+                  bool? needlePrepReminderEnabled,
+                }) {},
+                onToggleBiometricLock: (_) {},
+                onToggleICloudBackup: (_) {},
+                onManualICloudSync: () {},
               );
             }
 

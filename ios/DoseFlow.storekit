@@ -14,7 +14,7 @@
   ],
   "products" : [
     {
-      "displayPrice" : "79.99",
+      "displayPrice" : "119.99",
       "familyShareable" : false,
       "internalID" : "6478901234",
       "localizations" : [
@@ -93,7 +93,8 @@
           "internalID" : "6478901236",
           "introductoryOffer" : {
             "internalID" : "INT-ANNUAL-3D",
-            "paymentMode" : "freeTrial",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
             "subscriptionPeriod" : "P3D"
           },
           "localizations" : [

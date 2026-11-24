@@ -80,7 +80,7 @@ class DuoAdaptiveScaffold extends StatelessWidget {
                 width: 1.2,
                 color: const Color(0xFFE2E8F0),
               ),
-              // 右欄：體重趨勢、痛點對照與換算
+              // 右欄：體重趨勢與個人紀錄洞察
               Expanded(
                 flex: 5,
                 child: secondaryPane,
@@ -101,22 +101,18 @@ class DuoAdaptiveScaffold extends StatelessWidget {
   }
 }
 
-/// iPhone Duo 桌面半折 90 度懸停專用：免持抽藥與部位引導視圖 (Hands-Free Injection Guide)
+/// iPhone Duo 桌面半折 90 度懸停專用：免持部位輪替與打卡視圖 (Hands-Free Rotation & Log Guide)
 class DuoTabletopInjectionGuide extends StatelessWidget {
   const DuoTabletopInjectionGuide({
     super.key,
     required this.recommendedSite,
-    required this.targetDoseMg,
-    required this.calculatedUnits,
-    required this.calculatedVolumeMl,
+    required this.loggedDoseMg,
     required this.onConfirmInjection,
     this.onClose,
   });
 
   final InjectionSite recommendedSite;
-  final double targetDoseMg;
-  final double calculatedUnits;
-  final double calculatedVolumeMl;
+  final double loggedDoseMg;
   final VoidCallback onConfirmInjection;
   final VoidCallback? onClose;
 
@@ -124,7 +120,7 @@ class DuoTabletopInjectionGuide extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLanguage lang = context.locale.language;
     final bool isZh = lang.isZh;
-    final Color doseColor = PharmacokineticsEngine.colorForDose(targetDoseMg);
+    final Color doseColor = PharmacokineticsEngine.colorForDose(loggedDoseMg);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
@@ -162,7 +158,7 @@ class DuoTabletopInjectionGuide extends StatelessWidget {
                               const Icon(Icons.table_restaurant_rounded, color: Color(0xFF10B981), size: 14),
                               const SizedBox(width: 6),
                               Text(
-                                isZh ? 'iPhone Duo 桌面免持模式' : 'Duo Hands-Free Tabletop',
+                                isZh ? '大螢幕免持輪替模式' : 'Wide-Screen Hands-Free Guide',
                                 style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF34D399)),
                               ),
                             ],
@@ -216,7 +212,7 @@ class DuoTabletopInjectionGuide extends StatelessWidget {
             const SizedBox(height: 8),
 
             // ==========================================
-            // 下半屏 (桌面平放操作區)：超大高對比針筒刻度與確認按鈕
+            // 下半屏 (桌面平放操作區)：記錄處方劑量與一鍵打卡按鈕
             // ==========================================
             Expanded(
               flex: 5,
@@ -230,7 +226,7 @@ class DuoTabletopInjectionGuide extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
                     Text(
-                      isZh ? 'U-100 胰島素針筒請抽取至：' : 'Draw U-100 Syringe Exactly To:',
+                      isZh ? '本次預計記錄劑量（依處方醫囑）：' : 'Logged Prescribed Dose:',
                       style: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 6),
@@ -240,7 +236,7 @@ class DuoTabletopInjectionGuide extends StatelessWidget {
                       textBaseline: TextBaseline.alphabetic,
                       children: <Widget>[
                         Text(
-                          calculatedUnits.toStringAsFixed(1),
+                          loggedDoseMg.toStringAsFixed(1),
                           style: TextStyle(
                             fontSize: 48,
                             fontWeight: FontWeight.w900,
@@ -250,14 +246,14 @@ class DuoTabletopInjectionGuide extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          isZh ? '格 (Units)' : 'Units',
+                          'mg',
                           style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: doseColor),
                         ),
                       ],
                     ),
                     Text(
-                      '(${calculatedVolumeMl.toStringAsFixed(2)} mL ｜ 劑量: ${targetDoseMg.toStringAsFixed(1)} mg)',
-                      style: const TextStyle(fontSize: 12.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                      isZh ? '請依照醫師或藥師處方操作，完成後點擊下方打卡' : 'Follow your prescriber instructions, then tap to log',
+                      style: const TextStyle(fontSize: 12.0, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
                     ),
                     const Spacer(),
                     SizedBox(
@@ -294,16 +290,12 @@ class DuoOuterQuickActionCard extends StatelessWidget {
   const DuoOuterQuickActionCard({
     super.key,
     required this.recommendedSite,
-    required this.targetDoseMg,
-    required this.calculatedUnits,
-    required this.calculatedVolumeMl,
+    required this.loggedDoseMg,
     required this.onConfirmInjection,
   });
 
   final InjectionSite recommendedSite;
-  final double targetDoseMg;
-  final double calculatedUnits;
-  final double calculatedVolumeMl;
+  final double loggedDoseMg;
   final VoidCallback onConfirmInjection;
 
   void _openTabletopMode(BuildContext context) {
@@ -311,9 +303,7 @@ class DuoOuterQuickActionCard extends StatelessWidget {
       MaterialPageRoute<void>(
         builder: (BuildContext routeContext) => DuoTabletopInjectionGuide(
           recommendedSite: recommendedSite,
-          targetDoseMg: targetDoseMg,
-          calculatedUnits: calculatedUnits,
-          calculatedVolumeMl: calculatedVolumeMl,
+          loggedDoseMg: loggedDoseMg,
           onConfirmInjection: () {
             Navigator.of(routeContext).pop();
             onConfirmInjection();
@@ -358,8 +348,8 @@ class DuoOuterQuickActionCard extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     isZh
-                        ? (isLarge ? 'iPhone Duo 7.6" 雙欄模式已啟用' : 'iPhone Duo 免持抽藥導引')
-                        : (isLarge ? 'iPhone Duo 7.6" Dual-Pane Active' : 'Duo Hands-Free Tabletop Guide'),
+                        ? (isLarge ? '大螢幕雙欄模式已啟用' : '免持輪替導引模式')
+                        : (isLarge ? 'Wide-Screen Dual-Pane Active' : 'Hands-Free Rotation Guide'),
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w800,
@@ -369,8 +359,8 @@ class DuoOuterQuickActionCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     isZh
-                        ? '半折手機立於桌面，雙手免持看清第 ${calculatedUnits.toStringAsFixed(0)} 格刻度'
-                        : 'Fold 90° on table for hands-free ${calculatedUnits.toStringAsFixed(0)}-Unit draw guide',
+                        ? '半折手機立於桌面，雙手免持檢視建議輪替部位並一鍵打卡'
+                        : 'Fold 90° on table for hands-free site rotation & 1-tap logging',
                     style: const TextStyle(
                       fontSize: 11.5,
                       color: Color(0xFF94A3B8),

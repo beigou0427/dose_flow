@@ -246,8 +246,8 @@ void main() {
         expect(html, contains('<!DOCTYPE html>'));
         expect(html, contains('@page { size: A4 portrait; margin: 12mm; }'));
         expect(html, contains('@media print'));
-        expect(html, contains('https://doseflow.app'));
-        expect(html, contains('Clinician Partner Ready'));
+        expect(html, contains('https://beigou0427.github.io/dose_flow/'));
+        expect(html, contains('Personal Visit Summary'));
         expect(html, contains('5.0 mg'));
       }
     });

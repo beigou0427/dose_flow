@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'app_localization.dart';
+import 'app_theme.dart';
 import 'haptic_feedback_service.dart';
 import 'pharmacokinetics_engine.dart';
 
@@ -374,7 +375,7 @@ class _DailyFoodNoiseDialogState extends State<DailyFoodNoiseDialog> {
                 isZh
                     ? '大腦中想吃甜食、零食的念頭壓制程度：'
                     : 'Level of mental chatter and craving suppression:',
-                style: const TextStyle(fontSize: 12.5, color: Color(0xFF475569)),
+                style: const TextStyle(fontSize: 12.5, color: DoseFlowColors.textSecondary),
               ),
               const SizedBox(height: 10),
               Container(
@@ -488,7 +489,7 @@ class _DailyFoodNoiseDialogState extends State<DailyFoodNoiseDialog> {
             width: 95,
             child: Text(
               label,
-              style: const TextStyle(fontSize: 11.5, color: Color(0xFF334155)),
+              style: const TextStyle(fontSize: 11.5, color: DoseFlowColors.textSecondary),
             ),
           ),
           Expanded(
@@ -497,7 +498,7 @@ class _DailyFoodNoiseDialogState extends State<DailyFoodNoiseDialog> {
               min: 0,
               max: 5,
               divisions: 5,
-              activeColor: value > 2 ? const Color(0xFFEF4444) : const Color(0xFF0EA5E9),
+              activeColor: value > 2 ? const Color(0xFFEF4444) : DoseFlowColors.cyan,
               onChanged: (double v) {
                 HapticFeedbackService.selectionTick();
                 onChanged(v.round());
@@ -511,7 +512,7 @@ class _DailyFoodNoiseDialogState extends State<DailyFoodNoiseDialog> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: value > 2 ? const Color(0xFFEF4444) : const Color(0xFF334155),
+                color: value > 2 ? const Color(0xFFEF4444) : DoseFlowColors.textPrimary,
               ),
             ),
           ),

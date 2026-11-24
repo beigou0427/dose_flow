@@ -151,8 +151,11 @@ void main() {
           LegalComplianceHub.generateAppStoreReviewNotes(AppLanguage.enUS);
       expect(reviewNotes, isNotEmpty);
       expect(reviewNotes.contains('GUIDELINE 1.4.1'), isTrue);
+      expect(reviewNotes.contains('1.4.2'), isTrue);
+      expect(reviewNotes.contains('NO DOSAGE CALCULATOR'), isTrue);
       expect(reviewNotes.contains('GUIDELINE 5.1.1'), isTrue);
       expect(reviewNotes.contains('IN-APP PURCHASE & SUBSCRIPTION TESTING'), isTrue);
+      expect(reviewNotes.contains('offline sandbox simulation mode'), isFalse);
     });
   });
 }

@@ -14,11 +14,11 @@ struct FrameSpec {
 }
 
 let frames: [FrameSpec] = [
-    FrameSpec(idx: 1, titleZh: "即時 GLP-1 血中濃度曲線", subZh: "iPhone Duo 雙欄同步洞察 ‧ FDA Bateman 模型", titleEn: "Live GLP-1 Active Level Curve", subEn: "iPhone Duo Dual-Pane Insights & FDA Bateman PK", r: 14/255, g: 165/255, b: 233/255),
-    FrameSpec(idx: 2, titleZh: "U-100 針筒一秒防呆換算", subZh: "乾粉泡製與現成藥液 ‧ 8 大腹部智慧輪替", titleEn: "Exact U-100 Syringe Math", subEn: "Reconstituted Peptides & Smart 8-Site Rotation", r: 139/255, g: 92/255, b: 246/255),
+    FrameSpec(idx: 1, titleZh: "即時 GLP-1 血中濃度曲線", subZh: "FDA 仿單 Bateman 模型 ‧ 掌握個人半衰期趨勢", titleEn: "Live GLP-1 Half-Life Curve", subEn: "FDA Reference Bateman Model & 7-Day Decay View", r: 14/255, g: 165/255, b: 233/255),
+    FrameSpec(idx: 2, titleZh: "視覺化人體部位輪替導引", subZh: "避開肚臍 5 公分 ‧ 8 大部位智慧輪替記錄", titleEn: "Visual Injection Site Rotation", subEn: "Smart 8-Zone Rotation & Complete Shot Diary", r: 139/255, g: 92/255, b: 246/255),
     FrameSpec(idx: 3, titleZh: "劑量染色體重趨勢與回診報表", subZh: "食慾抑制曲線分析 ‧ 30 秒匯出醫師摘要", titleEn: "Dose-Colored Weight & Analytics", subEn: "Food Noise Dynamics & 1-Page Doctor Summary", r: 16/255, g: 185/255, b: 129/255),
     FrameSpec(idx: 4, titleZh: "100% 本地離線隱私防護", subZh: "零雲端伺服器、免註冊 ‧ 個人數據完全自主", titleEn: "100% Local-First Privacy", subEn: "Zero Cloud Servers, Zero Account & Zero Ad Trackers", r: 249/255, g: 115/255, b: 22/255),
-    FrameSpec(idx: 5, titleZh: "專為 iPhone Duo 懸停設計", subZh: "雙手免持抽藥引導 ‧ 防硬塊自動部位輪替", titleEn: "Made for iPhone Duo Tabletop", subEn: "Hands-Free Injection Guide & Auto Site Rotation", r: 16/255, g: 185/255, b: 129/255)
+    FrameSpec(idx: 5, titleZh: "智慧週期日曆與推播提醒", subZh: "自訂每週施打排程 ‧ Face ID 加密隱私保護", titleEn: "Smart Weekly Shot Calendar", subEn: "Custom Schedule Alerts & Face ID Privacy Lock", r: 16/255, g: 185/255, b: 129/255)
 ]
 
 func composite(rawPath: String, fallbackPath: String, outPath: String, width: Int, height: Int, spec: FrameSpec, isZh: Bool) {

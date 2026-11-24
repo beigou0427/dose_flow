@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'pharmacokinetics_engine.dart';
 
 /// 應用程式持久化快照資料模型（封裝所有需要離線儲存的使用者臨床數據）
@@ -185,6 +186,10 @@ class AppPersistence {
   static final AppPersistence instance = AppPersistence._();
 
   static const String storageFileName = 'dose_flow_storage_v1.json';
+  static const MethodChannel _storageChannel =
+      MethodChannel('com.doseflow.app/storage');
+
+  String? _resolvedDocumentsDir;
 
   /// 當前記憶體快照快取（啟動後常駐記憶體）
   AppStorageSnapshot _cachedSnapshot = AppStorageSnapshot.initial();
@@ -204,10 +209,30 @@ class AppPersistence {
   /// 虛擬記憶體儲存器（供測試沙盒與 Web 端使用）
   static String? _memoryStorageContent;
 
-  /// 取得實體存檔檔案（具備例外攔截與安全降級）
-  File? _getStorageFile() {
+  Future<String?> _resolveDocumentsDir() async {
+    if (_isIsolatedSandbox) return null;
+    if (_resolvedDocumentsDir != null) return _resolvedDocumentsDir;
+    if (Platform.isIOS) {
+      try {
+        final String? path =
+            await _storageChannel.invokeMethod<String>('getDocumentsPath');
+        if (path != null && path.isNotEmpty) {
+          _resolvedDocumentsDir = path;
+          return path;
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  /// 取得實體存檔檔案（優先使用 iOS Documents 沙盒目錄，具備例外攔截與安全降級）
+  Future<File?> _getStorageFile() async {
     if (_isIsolatedSandbox) return null;
     try {
+      final String? docsDir = await _resolveDocumentsDir();
+      if (docsDir != null && docsDir.isNotEmpty) {
+        return File('$docsDir/$storageFileName');
+      }
       return File(storageFileName);
     } catch (_) {
       return null;
@@ -232,7 +257,7 @@ class AppPersistence {
 
     // 2. 實體磁碟載入
     try {
-      final File? file = _getStorageFile();
+      final File? file = await _getStorageFile();
       if (file != null && await file.exists()) {
         final String rawJson = await file.readAsString();
         final String cleanJson = rawJson.replaceAll('\uFEFF', '').trim();
@@ -264,7 +289,7 @@ class AppPersistence {
 
     // 2. 實體磁碟原子化寫入 (先寫入 .tmp 檔再重命名替換)
     try {
-      final File? targetFile = _getStorageFile();
+      final File? targetFile = await _getStorageFile();
       if (targetFile != null) {
         final File tmpFile = File('${targetFile.path}.tmp');
         await tmpFile.writeAsString(jsonString, flush: true);

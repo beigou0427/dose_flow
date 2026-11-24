@@ -98,7 +98,7 @@ class _BodyRotationMapCardState extends State<BodyRotationMapCard>
     final String lastDateStr = lastLog != null
         ? '${lastLog.timestamp.month}/${lastLog.timestamp.day}'
         : '--/--';
-    final double volumeMl = ((widget.activeDoseMg / 5.0)).clamp(0.05, 1.5);
+    final double lastDoseMg = lastLog?.doseMg ?? widget.activeDoseMg;
 
     return Container(
       decoration: BoxDecoration(
@@ -342,8 +342,8 @@ class _BodyRotationMapCardState extends State<BodyRotationMapCard>
                     children: <Widget>[
                       Text(
                         isZh
-                            ? '上次施打：${lastZone?.label(lang) ?? "尚未紀錄"} (${volumeMl.toStringAsFixed(2)} mL)'
-                            : 'Last: ${lastZone?.label(lang) ?? "None"} (${volumeMl.toStringAsFixed(2)} mL)',
+                            ? '上次施打：${lastZone?.label(lang) ?? "尚未紀錄"} (${lastDoseMg.toStringAsFixed(1)} mg)'
+                            : 'Last: ${lastZone?.label(lang) ?? "None"} (${lastDoseMg.toStringAsFixed(1)} mg)',
                         style: const TextStyle(
                           fontSize: 11.5,
                           color: DoseFlowColors.textSecondary,
